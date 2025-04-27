@@ -33,16 +33,16 @@ const Header = () => {
             {/* Admin Dashboard Link (only visible on customer pages) */}
             {!isAdmin && (
               <Link href="/admin/dashboard">
-                <a className="text-white hover:text-[#FF9900]">
+                <span className="text-white hover:text-[#FF9900] cursor-pointer">
                   <span className="font-bold">Admin</span>
-                </a>
+                </span>
               </Link>
             )}
             
             {/* Cart Link (only visible on customer pages) */}
             {!isAdmin && (
               <Link href="/cart">
-                <a className="flex items-end">
+                <span className="flex items-end cursor-pointer">
                   <div className="relative">
                     <ShoppingCart className="h-6 w-6" />
                     <span className="absolute -top-1 -right-1 bg-[#FF9900] text-black rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
@@ -50,7 +50,7 @@ const Header = () => {
                     </span>
                   </div>
                   <span className="hidden sm:inline font-bold ml-1">Cart</span>
-                </a>
+                </span>
               </Link>
             )}
             
