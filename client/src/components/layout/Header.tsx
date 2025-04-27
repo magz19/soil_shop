@@ -57,9 +57,9 @@ const Header = () => {
             {/* Home Link (only visible on admin pages) */}
             {isAdmin && (
               <Link href="/">
-                <a className="text-white hover:text-[#FF9900]">
+                <span className="text-white hover:text-[#FF9900] cursor-pointer">
                   <span className="font-bold">Store Front</span>
-                </a>
+                </span>
               </Link>
             )}
           </div>

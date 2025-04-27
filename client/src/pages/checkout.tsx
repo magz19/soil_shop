@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/lib/context/CartContext";
 import { useMutation } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CheckoutProgress from "@/components/checkout/CheckoutProgress";
 import { InsertOrder, Order } from "@shared/schema";
-import { CreditCard, MapPin, Phone, User, Mail } from "lucide-react";
+import { CreditCard, MapPin, Phone, User, Mail, Upload } from "lucide-react";
 
 // Mock user ID for demonstration
 const MOCK_USER_ID = 1;
@@ -22,6 +22,9 @@ const Checkout = () => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<'shipping' | 'payment' | 'review'>('shipping');
   const [shippingMethod, setShippingMethod] = useState('pickup');
+  const [paymentMethod, setPaymentMethod] = useState('gcash');
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [billingInfo, setBillingInfo] = useState({
     fullName: "",
     phone: "",
@@ -331,14 +334,55 @@ const Checkout = () => {
                     <div className="bg-gray-50 p-3 rounded">
                       <div className="flex items-center space-x-2">
                         <CreditCard className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">GCash Payment</span>
+                        <span className="font-medium">{paymentMethod === 'gcash' ? 'GCash Payment' : 'Over-the-counter Payment'}</span>
                       </div>
-                      <p className="mt-1">Martin Magno 091234567</p>
                       
-                      <div className="mt-3 text-sm border-t pt-2 text-gray-500">
-                        <p>Please make the payment to the account above and send a screenshot of the transaction to the store.</p>
-                        <p>You can also select "Over-the-counter" payment upon receiving your order.</p>
-                      </div>
+                      {paymentMethod === 'gcash' && (
+                        <>
+                          <p className="mt-1">Martin Magno 091234567</p>
+                          
+                          <div className="mt-3">
+                            <div className="flex items-center space-x-2">
+                              <label htmlFor="paymentScreenshot" className="block text-sm font-medium">
+                                Payment Screenshot <span className="text-red-500">*</span>
+                              </label>
+                            </div>
+                            
+                            <div className="mt-2 flex items-center space-x-2">
+                              <input
+                                type="file"
+                                id="paymentScreenshot"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setPaymentScreenshot(e.target.files[0]);
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                size="sm"
+                                className="flex items-center"
+                              >
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Screenshot
+                              </Button>
+                              {paymentScreenshot && (
+                                <span className="text-sm text-green-600">
+                                  {paymentScreenshot.name} uploaded
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {paymentMethod === 'counter' && (
+                        <p className="mt-1 text-sm text-gray-500">Pay during pickup or delivery.</p>
+                      )}
                     </div>
                   </div>
                   
@@ -360,7 +404,7 @@ const Checkout = () => {
                             <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                           </div>
                           <div className="ml-auto">
-                            ${((item.product.sale_price || item.product.price) * item.quantity).toFixed(2)}
+                            ₱{((item.product.sale_price || item.product.price) * item.quantity).toFixed(2)}
                           </div>
                         </div>
                       ))}
@@ -397,7 +441,7 @@ const Checkout = () => {
             <div className="space-y-2 text-sm mb-4">
               <div className="flex justify-between">
                 <span>Items ({cart.items.reduce((acc, item) => acc + item.quantity, 0)}):</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>₱{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping:</span>
@@ -409,7 +453,7 @@ const Checkout = () => {
             
             <div className="flex justify-between font-bold text-lg mt-4">
               <span>Order total:</span>
-              <span>${total.toFixed(2)}</span>
+              <span>₱{total.toFixed(2)}</span>
             </div>
             
             {currentStep === 'review' && (
