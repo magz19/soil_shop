@@ -8,9 +8,10 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import CheckoutProgress from "@/components/checkout/CheckoutProgress";
-import ShippingForm from "@/components/checkout/ShippingForm";
 import { InsertOrder, Order } from "@shared/schema";
+import { CreditCard, MapPin, Phone, User, Mail } from "lucide-react";
 
 // Mock user ID for demonstration
 const MOCK_USER_ID = 1;
@@ -20,10 +21,11 @@ const Checkout = () => {
   const { cart, clearCart } = useCart();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<'shipping' | 'payment' | 'review'>('shipping');
-  const [shippingMethod, setShippingMethod] = useState('free');
-  const [shippingInfo, setShippingInfo] = useState({
+  const [shippingMethod, setShippingMethod] = useState('pickup');
+  const [billingInfo, setBillingInfo] = useState({
     fullName: "",
     phone: "",
+    email: "",
     address: "",
     city: "",
     state: "",
@@ -36,16 +38,20 @@ const Checkout = () => {
     return total + (price * item.quantity);
   }, 0) || 0;
 
-  // Calculate shipping cost
-  const getShippingCost = () => {
-    if (shippingMethod === 'free') return 0;
-    if (shippingMethod === 'oneDay') return 9.99;
-    if (shippingMethod === 'sameDay') return 14.99;
-    return 0;
+  // Calculate total (no shipping cost)
+  const total = subtotal;
+
+  // Handle form input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setBillingInfo(prev => ({ ...prev, [name]: value }));
   };
 
-  // Calculate total
-  const total = subtotal + getShippingCost();
+  // Check if form is complete
+  const isFormComplete = () => {
+    const { fullName, phone, email, address, city, state, zipCode } = billingInfo;
+    return fullName && phone && email && address && city && state && zipCode;
+  };
 
   // Place order mutation
   const placeOrderMutation = useMutation({
@@ -70,12 +76,16 @@ const Checkout = () => {
     }
   });
 
-  const handleShippingSubmit = (values: any) => {
-    setShippingInfo(values);
-    setCurrentStep('payment');
-  };
-
-  const handlePaymentSubmit = () => {
+  const handleShippingSubmit = () => {
+    if (!isFormComplete()) {
+      toast({
+        title: "Please fill all fields",
+        description: "All billing details are required to place an order.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setCurrentStep('review');
   };
 
@@ -86,10 +96,10 @@ const Checkout = () => {
       userId: MOCK_USER_ID,
       total: total,
       status: 'pending',
-      shippingAddress: shippingInfo.address,
-      shippingCity: shippingInfo.city,
-      shippingState: shippingInfo.state,
-      shippingZip: shippingInfo.zipCode,
+      shippingAddress: billingInfo.address,
+      shippingCity: billingInfo.city,
+      shippingState: billingInfo.state,
+      shippingZip: billingInfo.zipCode,
       shippingMethod: shippingMethod
     };
     
@@ -116,7 +126,7 @@ const Checkout = () => {
       <h1 className="text-2xl font-bold mb-6">Checkout</h1>
       
       {/* Progress Indicator */}
-      <CheckoutProgress currentStep={currentStep} />
+      <CheckoutProgress currentStep={currentStep === 'shipping' ? 'shipping' : 'review'} />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -124,11 +134,113 @@ const Checkout = () => {
           <div className="bg-white rounded-md shadow p-6">
             {currentStep === 'shipping' && (
               <>
-                <h2 className="text-lg font-bold mb-4">Shipping Address</h2>
-                <ShippingForm 
-                  onSubmit={handleShippingSubmit}
-                  defaultValues={shippingInfo}
-                />
+                <h2 className="text-lg font-bold mb-4">Billing Details</h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
+                      <div className="flex items-center mt-1">
+                        <User className="h-4 w-4 text-gray-400 absolute ml-3" />
+                        <Input 
+                          id="fullName"
+                          name="fullName"
+                          value={billingInfo.fullName}
+                          onChange={handleInputChange}
+                          placeholder="John Doe"
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
+                      <div className="flex items-center mt-1">
+                        <Phone className="h-4 w-4 text-gray-400 absolute ml-3" />
+                        <Input 
+                          id="phone"
+                          name="phone"
+                          value={billingInfo.phone}
+                          onChange={handleInputChange}
+                          placeholder="(123) 456-7890"
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                    <div className="flex items-center mt-1">
+                      <Mail className="h-4 w-4 text-gray-400 absolute ml-3" />
+                      <Input 
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={billingInfo.email}
+                        onChange={handleInputChange}
+                        placeholder="your@email.com"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="address">Address <span className="text-red-500">*</span></Label>
+                    <div className="flex items-center mt-1">
+                      <MapPin className="h-4 w-4 text-gray-400 absolute ml-3" />
+                      <Input 
+                        id="address"
+                        name="address"
+                        value={billingInfo.address}
+                        onChange={handleInputChange}
+                        placeholder="123 Main St"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="city"
+                        name="city"
+                        value={billingInfo.city}
+                        onChange={handleInputChange}
+                        placeholder="Manila"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="state">State/Province <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="state"
+                        name="state"
+                        value={billingInfo.state}
+                        onChange={handleInputChange}
+                        placeholder="Metro Manila"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="zipCode">ZIP Code <span className="text-red-500">*</span></Label>
+                      <Input 
+                        id="zipCode"
+                        name="zipCode"
+                        value={billingInfo.zipCode}
+                        onChange={handleInputChange}
+                        placeholder="1008"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
                 
                 <Separator className="my-6" />
                 
@@ -139,30 +251,22 @@ const Checkout = () => {
                   className="space-y-3"
                 >
                   <div className="flex items-start p-3 border border-gray-300 rounded cursor-pointer hover:border-[#007185]">
-                    <RadioGroupItem value="free" id="free-shipping" className="mt-1 mr-3" />
+                    <RadioGroupItem value="pickup" id="pickup" className="mt-1 mr-3" />
                     <div className="flex-grow">
-                      <Label htmlFor="free-shipping" className="font-medium">FREE Prime Delivery</Label>
-                      <p className="text-sm text-gray-500">Get it by Tuesday, Oct 17</p>
+                      <Label htmlFor="pickup" className="font-medium">Personal Pickup</Label>
+                      <p className="text-sm text-gray-500">Address: 123 Mendiola St. Manila City</p>
+                      <p className="text-sm text-gray-500">Contact: Anjhela Geron 09454545</p>
                     </div>
                     <div className="ml-auto font-bold">FREE</div>
                   </div>
                   
                   <div className="flex items-start p-3 border border-gray-300 rounded cursor-pointer hover:border-[#007185]">
-                    <RadioGroupItem value="oneDay" id="one-day" className="mt-1 mr-3" />
+                    <RadioGroupItem value="delivery" id="delivery" className="mt-1 mr-3" />
                     <div className="flex-grow">
-                      <Label htmlFor="one-day" className="font-medium">One-Day Delivery</Label>
-                      <p className="text-sm text-gray-500">Get it Tomorrow</p>
+                      <Label htmlFor="delivery" className="font-medium">Grab/Lalamove Delivery</Label>
+                      <p className="text-sm text-gray-500">Arranged by client (shipping fee not included)</p>
                     </div>
-                    <div className="ml-auto font-bold">$9.99</div>
-                  </div>
-                  
-                  <div className="flex items-start p-3 border border-gray-300 rounded cursor-pointer hover:border-[#007185]">
-                    <RadioGroupItem value="sameDay" id="same-day" className="mt-1 mr-3" />
-                    <div className="flex-grow">
-                      <Label htmlFor="same-day" className="font-medium">Same-Day Delivery</Label>
-                      <p className="text-sm text-gray-500">Get it Today by 10PM</p>
-                    </div>
-                    <div className="ml-auto font-bold">$14.99</div>
+                    <div className="ml-auto font-bold">Arranged by client</div>
                   </div>
                 </RadioGroup>
                 
@@ -175,72 +279,10 @@ const Checkout = () => {
                     Return to Cart
                   </Button>
                   <Button 
-                    onClick={() => handleShippingSubmit(shippingInfo)}
+                    onClick={handleShippingSubmit}
                     className="bg-[#FFD814] hover:bg-[#F7CA00] text-black font-bold"
                   >
-                    Continue to Payment
-                  </Button>
-                </div>
-              </>
-            )}
-            
-            {currentStep === 'payment' && (
-              <>
-                <h2 className="text-lg font-bold mb-4">Payment Method</h2>
-                
-                {/* Mock payment form */}
-                <div className="space-y-4">
-                  <div>
-                    <Label>Card Number</Label>
-                    <input 
-                      type="text" 
-                      className="w-full border border-gray-300 rounded px-3 py-2 mt-1" 
-                      placeholder="1234 5678 9012 3456" 
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Expiration Date</Label>
-                      <input 
-                        type="text" 
-                        className="w-full border border-gray-300 rounded px-3 py-2 mt-1" 
-                        placeholder="MM/YY" 
-                      />
-                    </div>
-                    <div>
-                      <Label>Security Code</Label>
-                      <input 
-                        type="text" 
-                        className="w-full border border-gray-300 rounded px-3 py-2 mt-1" 
-                        placeholder="CVV" 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label>Name on Card</Label>
-                    <input 
-                      type="text" 
-                      className="w-full border border-gray-300 rounded px-3 py-2 mt-1" 
-                      placeholder="John Doe" 
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-between mt-6">
-                  <Button 
-                    variant="link" 
-                    className="text-[#007185] p-0"
-                    onClick={() => setCurrentStep('shipping')}
-                  >
-                    Back to Shipping
-                  </Button>
-                  <Button 
-                    onClick={handlePaymentSubmit}
-                    className="bg-[#FFD814] hover:bg-[#F7CA00] text-black font-bold"
-                  >
-                    Review Order
+                    Continue to Review
                   </Button>
                 </div>
               </>
@@ -251,14 +293,15 @@ const Checkout = () => {
                 <h2 className="text-lg font-bold mb-4">Review Your Order</h2>
                 
                 <div className="space-y-6">
-                  {/* Shipping Info */}
+                  {/* Billing Info */}
                   <div>
-                    <h3 className="font-medium mb-2">Shipping Address</h3>
+                    <h3 className="font-medium mb-2">Billing Details</h3>
                     <div className="bg-gray-50 p-3 rounded">
-                      <p>{shippingInfo.fullName}</p>
-                      <p>{shippingInfo.address}</p>
-                      <p>{shippingInfo.city}, {shippingInfo.state} {shippingInfo.zipCode}</p>
-                      <p>{shippingInfo.phone}</p>
+                      <p>{billingInfo.fullName}</p>
+                      <p>{billingInfo.email}</p>
+                      <p>{billingInfo.phone}</p>
+                      <p>{billingInfo.address}</p>
+                      <p>{billingInfo.city}, {billingInfo.state} {billingInfo.zipCode}</p>
                     </div>
                   </div>
                   
@@ -266,9 +309,36 @@ const Checkout = () => {
                   <div>
                     <h3 className="font-medium mb-2">Shipping Method</h3>
                     <div className="bg-gray-50 p-3 rounded">
-                      {shippingMethod === 'free' && <p>FREE Prime Delivery (2-3 days)</p>}
-                      {shippingMethod === 'oneDay' && <p>One-Day Delivery ($9.99)</p>}
-                      {shippingMethod === 'sameDay' && <p>Same-Day Delivery ($14.99)</p>}
+                      {shippingMethod === 'pickup' && (
+                        <>
+                          <p className="font-medium">Personal Pickup</p>
+                          <p>Address: 123 Mendiola St. Manila City</p>
+                          <p>Contact: Anjhela Geron 09454545</p>
+                        </>
+                      )}
+                      {shippingMethod === 'delivery' && (
+                        <>
+                          <p className="font-medium">Grab/Lalamove Delivery</p>
+                          <p>Arranged by client (shipping fee not included)</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Payment Method */}
+                  <div>
+                    <h3 className="font-medium mb-2">Payment Information</h3>
+                    <div className="bg-gray-50 p-3 rounded">
+                      <div className="flex items-center space-x-2">
+                        <CreditCard className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">GCash Payment</span>
+                      </div>
+                      <p className="mt-1">Martin Magno 091234567</p>
+                      
+                      <div className="mt-3 text-sm border-t pt-2 text-gray-500">
+                        <p>Please make the payment to the account above and send a screenshot of the transaction to the store.</p>
+                        <p>You can also select "Over-the-counter" payment upon receiving your order.</p>
+                      </div>
                     </div>
                   </div>
                   
@@ -302,9 +372,9 @@ const Checkout = () => {
                   <Button 
                     variant="link" 
                     className="text-[#007185] p-0"
-                    onClick={() => setCurrentStep('payment')}
+                    onClick={() => setCurrentStep('shipping')}
                   >
-                    Back to Payment
+                    Back to Shipping
                   </Button>
                   <Button 
                     onClick={handlePlaceOrder}
@@ -331,13 +401,7 @@ const Checkout = () => {
               </div>
               <div className="flex justify-between">
                 <span>Shipping:</span>
-                <span>
-                  {getShippingCost() === 0 ? 'FREE' : `$${getShippingCost().toFixed(2)}`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Estimated tax:</span>
-                <span>$0.00</span>
+                <span>{shippingMethod === 'pickup' ? 'FREE' : 'Arranged by client'}</span>
               </div>
             </div>
             

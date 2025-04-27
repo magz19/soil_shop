@@ -42,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cart/:userId", async (req, res) => {
     try {
       const cart = await storage.getCartWithProducts(parseInt(req.params.userId));
-      res.json(cart || { items: [] });
+      res.json(cart || { id: 0, userId: parseInt(req.params.userId), items: [] });
     } catch (error) {
       res.status(500).json({ message: "Error getting cart" });
     }
@@ -111,6 +111,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(order);
     } catch (error) {
       res.status(500).json({ message: "Error getting order" });
+    }
+  });
+
+  // ADMIN ROUTES
+  
+  // Get all orders for admin dashboard
+  app.get("/api/admin/orders", async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Error getting all orders" });
+    }
+  });
+  
+  // Update order status
+  app.put("/api/admin/orders/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      const order = await storage.updateOrderStatus(parseInt(req.params.id), status);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating order status" });
+    }
+  });
+  
+  // Get order details with items
+  app.get("/api/admin/orders/:id", async (req, res) => {
+    try {
+      const order = await storage.getOrderWithItems(parseInt(req.params.id));
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Error getting order details" });
     }
   });
 
