@@ -272,7 +272,7 @@ const AdminOrderDetails = () => {
                         <div className="flex items-center">
                           <div className="w-12 h-12 mr-3 flex-shrink-0">
                             <img 
-                              src={item.product.imageUrl}
+                              src={item.product.image_url}
                               alt={item.product.name}
                               className="w-full h-full object-contain"
                             />

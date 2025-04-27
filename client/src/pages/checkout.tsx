@@ -350,7 +350,7 @@ const Checkout = () => {
                         <div key={item.id} className="flex items-center">
                           <div className="w-16 h-16 flex-shrink-0">
                             <img 
-                              src={item.product.imageUrl} 
+                              src={item.product.image_url} 
                               alt={item.product.name}
                               className="w-full h-full object-contain" 
                             />
@@ -360,7 +360,7 @@ const Checkout = () => {
                             <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                           </div>
                           <div className="ml-auto">
-                            ${((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}
+                            ${((item.product.sale_price || item.product.price) * item.quantity).toFixed(2)}
                           </div>
                         </div>
                       ))}
