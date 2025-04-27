@@ -34,7 +34,7 @@ const Checkout = () => {
 
   // Calculate subtotal
   const subtotal = cart?.items.reduce((total, item) => {
-    const price = item.product.salePrice || item.product.price;
+    const price = item.product.sale_price || item.product.price;
     return total + (price * item.quantity);
   }, 0) || 0;
 

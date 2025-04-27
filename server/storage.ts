@@ -78,104 +78,104 @@ export class MemStorage implements IStorage {
         name: "S-Oil Ultra Synthetic 5W-30 Motor Oil",
         description: "Premium full synthetic engine oil that provides exceptional wear protection, enhanced fuel economy and outstanding engine cleanliness.",
         price: 24.99,
-        salePrice: 21.99,
-        imageUrl: "https://images.unsplash.com/photo-1635273051936-7069a5e709a2?auto=format&fit=crop&w=400&h=300",
+        sale_price: 21.99,
+        image_url: "https://images.unsplash.com/photo-1635273051936-7069a5e709a2?auto=format&fit=crop&w=400&h=300",
         category: "Motor Oil",
-        inStock: true,
+        in_stock: true,
         rating: 4.8,
-        reviewCount: 234,
-        isPrime: true
+        review_count: 234,
+        is_prime: true
       },
       {
         id: 2,
         name: "S-Oil Seven Dragon 10W-40 Semi-Synthetic Oil",
         description: "Semi-synthetic oil that offers excellent protection against engine wear and tear. Ideal for high-mileage vehicles.",
         price: 19.99,
-        salePrice: 17.99,
-        imageUrl: "https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300",
+        sale_price: 17.99,
+        image_url: "https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300",
         category: "Motor Oil",
-        inStock: true,
+        in_stock: true,
         rating: 4.5,
-        reviewCount: 189,
-        isPrime: true
+        review_count: 189,
+        is_prime: true
       },
       {
         id: 3,
         name: "S-Oil Transmission Fluid ATF",
         description: "High-quality automatic transmission fluid ensuring smooth gear shifting and maximum protection for your transmission system.",
         price: 15.99,
-        salePrice: 14.50,
-        imageUrl: "https://images.unsplash.com/photo-1694487410292-94577041fddc?auto=format&fit=crop&w=400&h=300",
+        sale_price: 14.50,
+        image_url: "https://images.unsplash.com/photo-1694487410292-94577041fddc?auto=format&fit=crop&w=400&h=300",
         category: "Transmission Fluid",
-        inStock: true,
+        in_stock: true,
         rating: 4.6,
-        reviewCount: 112,
-        isPrime: true
+        review_count: 112,
+        is_prime: true
       },
       {
         id: 4,
         name: "S-Oil Brake Fluid DOT 4",
         description: "High performance brake fluid with excellent resistance to moisture absorption. Provides reliable braking performance even under extreme conditions.",
         price: 12.99,
-        salePrice: 10.99,
-        imageUrl: "https://images.unsplash.com/photo-1651678463794-7d991c0cf9a8?auto=format&fit=crop&w=400&h=300",
+        sale_price: 10.99,
+        image_url: "https://images.unsplash.com/photo-1651678463794-7d991c0cf9a8?auto=format&fit=crop&w=400&h=300",
         category: "Brake Fluid",
-        inStock: true,
+        in_stock: true,
         rating: 4.7,
-        reviewCount: 97,
-        isPrime: true
+        review_count: 97,
+        is_prime: true
       },
       {
         id: 5,
         name: "S-Oil Antifreeze Coolant",
         description: "All-season engine coolant that protects your cooling system from freezing and overheating. Contains anti-corrosion additives.",
         price: 14.99,
-        salePrice: 12.99,
-        imageUrl: "https://images.unsplash.com/photo-1600436518453-3c33d55326a5?auto=format&fit=crop&w=400&h=300",
+        sale_price: 12.99,
+        image_url: "https://images.unsplash.com/photo-1600436518453-3c33d55326a5?auto=format&fit=crop&w=400&h=300",
         category: "Coolant",
-        inStock: true,
+        in_stock: true,
         rating: 4.4,
-        reviewCount: 78,
-        isPrime: true
+        review_count: 78,
+        is_prime: true
       },
       {
         id: 6,
         name: "S-Oil Power Steering Fluid",
         description: "Specially formulated to protect power steering systems. Prevents leaks and ensures smooth operation of the steering mechanism.",
         price: 9.99,
-        salePrice: null,
-        imageUrl: "https://images.unsplash.com/photo-1607200319809-6b420ae7ca22?auto=format&fit=crop&w=400&h=300",
+        sale_price: null,
+        image_url: "https://images.unsplash.com/photo-1607200319809-6b420ae7ca22?auto=format&fit=crop&w=400&h=300",
         category: "Steering Fluid",
-        inStock: true,
+        in_stock: true,
         rating: 4.3,
-        reviewCount: 56,
-        isPrime: false
+        review_count: 56,
+        is_prime: false
       },
       {
         id: 7,
         name: "S-Oil Hydraulic Oil ISO 46",
         description: "Premium hydraulic oil that provides excellent wear protection and oxidation stability for hydraulic systems operating under high pressure.",
         price: 29.99,
-        salePrice: 25.99,
-        imageUrl: "https://images.unsplash.com/photo-1613361581093-2bbf4b19275e?auto=format&fit=crop&w=400&h=300",
+        sale_price: 25.99,
+        image_url: "https://images.unsplash.com/photo-1613361581093-2bbf4b19275e?auto=format&fit=crop&w=400&h=300",
         category: "Hydraulic Oil",
-        inStock: true,
+        in_stock: true,
         rating: 4.9,
-        reviewCount: 45,
-        isPrime: true
+        review_count: 45,
+        is_prime: true
       },
       {
         id: 8,
         name: "S-Oil Industrial Grease",
         description: "Multi-purpose lubricating grease for industrial and automotive applications. Provides excellent protection against wear, water, and heat.",
         price: 8.99,
-        salePrice: 7.50,
-        imageUrl: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&h=300",
+        sale_price: 7.50,
+        image_url: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&h=300",
         category: "Grease",
-        inStock: true,
+        in_stock: true,
         rating: 4.6,
-        reviewCount: 38,
-        isPrime: false
+        review_count: 38,
+        is_prime: false
       }
     ];
     
@@ -350,7 +350,7 @@ export class MemStorage implements IStorage {
           id: this.orderItemId++,
           orderId: order.id,
           productId: item.productId,
-          price: item.product.salePrice || item.product.price,
+          price: item.product.sale_price || item.product.price,
           quantity: item.quantity
         };
         
@@ -573,7 +573,7 @@ export class DatabaseStorage implements IStorage {
       const orderItemsData = cart.items.map(item => ({
         orderId: order.id,
         productId: item.productId,
-        price: item.product.salePrice || item.product.price,
+        price: item.product.sale_price || item.product.price,
         quantity: item.quantity
       }));
       
@@ -638,7 +638,22 @@ export class DatabaseStorage implements IStorage {
   // Helper method to seed initial S-Oil products
   async seedSoilProducts() {
     try {
-      const existingProducts = await this.getAllProducts();
+      // Avoid using getAllProducts as it might fail if there are schema issues
+      let existingProducts: Product[] = [];
+      try {
+        if (isMysqlConfigured() && mysqlDb) {
+          const result = await mysqlDb.execute('SELECT COUNT(*) as count FROM products');
+          const count = Array.isArray(result) && result[0] && result[0][0] ? (result[0][0] as any).count : 0;
+          existingProducts = count > 0 ? [{ id: 1 } as Product] : [];
+        } else {
+          const result = await db.execute('SELECT COUNT(*) as count FROM products');
+          const count = result?.rows?.[0]?.count || 0;
+          existingProducts = parseInt(count as any) > 0 ? [{ id: 1 } as Product] : [];
+        }
+      } catch (err) {
+        console.log("Error checking products, assuming no products exist:", err);
+        existingProducts = [];
+      }
       
       if (existingProducts.length === 0) {
         console.log("Seeding initial S-Oil products...");
