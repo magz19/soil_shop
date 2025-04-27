@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 35 99% 50%;  /* Amazon orange */
+  --primary-foreground: 20 14.3% 4.1%;
+  --secondary: 217 71% 53%;  /* Amazon blue */
+  --secondary-foreground: 211 100% 99%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 35 99% 50%;  /* Amazon orange */
+  --radius: 0.5rem;
+  
+  /* Amazon specific colors */
+  --amazon-dark-blue: 214 32% 18.6%;
+  --amazon-light-blue: 207 71% 40%;
+  --amazon-orange: 35 99% 50%;
+  --amazon-yellow: 41 98% 70%;
+  --amazon-dark-gray: 210 5% 20%;
+  --amazon-light-gray: 0 0% 92.5%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 35 99% 50%;  /* Amazon orange */
+  --primary-foreground: 0 0% 10%;
+  --secondary: 217 71% 53%;  /* Amazon blue */
+  --secondary-foreground: 0 0% 98%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 35 99% 50%; /* Amazon orange */
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-gray-100 text-foreground;
+  }
+}
+
+/* Amazon specific classes */
+.amazon-dark-blue {
+  @apply bg-[hsl(var(--amazon-dark-blue))];
+}
+
+.amazon-light-blue {
+  @apply bg-[hsl(var(--amazon-light-blue))];
+}
+
+.amazon-orange {
+  @apply bg-[hsl(var(--amazon-orange))];
+}
+
+.amazon-yellow {
+  @apply bg-[hsl(var(--amazon-yellow))];
+}
+
+.amazon-dark-gray {
+  @apply bg-[hsl(var(--amazon-dark-gray))];
+}
+
+.amazon-light-gray {
+  @apply bg-[hsl(var(--amazon-light-gray))];
+}
+
+.text-amazon-dark-blue {
+  @apply text-[hsl(var(--amazon-dark-blue))];
+}
+
+.text-amazon-light-blue {
+  @apply text-[hsl(var(--amazon-light-blue))];
+}
+
+.text-amazon-orange {
+  @apply text-[hsl(var(--amazon-orange))];
+}
+
+.text-amazon-yellow {
+  @apply text-[hsl(var(--amazon-yellow))];
+}
+
+.text-amazon-dark-gray {
+  @apply text-[hsl(var(--amazon-dark-gray))];
+}
+
+.hover-border:hover {
+  @apply border border-white;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  @apply shadow-md;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
