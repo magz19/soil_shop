@@ -1,8 +1,100 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { DatabaseStorage } from "./storage";
+import { db } from "./db";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { migrate } from "drizzle-orm/neon-serverless/migrator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize database and seed products
+  if (storage instanceof DatabaseStorage) {
+    try {
+      console.log("Initializing database...");
+      await db.execute(`CREATE TABLE IF NOT EXISTS _drizzle_migrations (
+        id SERIAL PRIMARY KEY,
+        hash text NOT NULL,
+        created_at timestamptz DEFAULT now()
+      )`);
+      
+      // Push schema changes to database
+      console.log("Running npm run db:push equivalent...");
+      try {
+        await db.execute(`
+          CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            email TEXT NOT NULL,
+            address TEXT,
+            city TEXT,
+            state TEXT,
+            "zipCode" TEXT,
+            phone TEXT
+          );
+          
+          CREATE TABLE IF NOT EXISTS products (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            price DECIMAL(10, 2) NOT NULL,
+            "salePrice" DECIMAL(10, 2),
+            "imageUrl" TEXT NOT NULL,
+            category TEXT NOT NULL,
+            "inStock" BOOLEAN NOT NULL DEFAULT true,
+            rating DECIMAL(3, 1) NOT NULL,
+            "reviewCount" INTEGER NOT NULL,
+            "isPrime" BOOLEAN NOT NULL DEFAULT false
+          );
+          
+          CREATE TABLE IF NOT EXISTS carts (
+            id SERIAL PRIMARY KEY,
+            "userId" INTEGER NOT NULL,
+            "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+          );
+          
+          CREATE TABLE IF NOT EXISTS cart_items (
+            id SERIAL PRIMARY KEY,
+            "cartId" INTEGER NOT NULL,
+            "productId" INTEGER NOT NULL,
+            quantity INTEGER NOT NULL
+          );
+          
+          CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+            "userId" INTEGER NOT NULL,
+            "shippingAddress" TEXT NOT NULL,
+            "shippingCity" TEXT NOT NULL,
+            "shippingState" TEXT NOT NULL,
+            "shippingZip" TEXT NOT NULL,
+            "shippingMethod" TEXT NOT NULL,
+            "paymentMethod" TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            total DECIMAL(10, 2) NOT NULL,
+            "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+          );
+          
+          CREATE TABLE IF NOT EXISTS order_items (
+            id SERIAL PRIMARY KEY,
+            "orderId" INTEGER NOT NULL,
+            "productId" INTEGER NOT NULL,
+            price DECIMAL(10, 2) NOT NULL,
+            quantity INTEGER NOT NULL
+          );
+        `);
+        console.log("Schema tables created successfully!");
+      } catch (error) {
+        console.log("Some tables might already exist, continuing...");
+      }
+      
+      // Seed initial products
+      await storage.seedSoilProducts();
+      console.log("Database initialization complete!");
+    } catch (error) {
+      console.error("Database initialization error:", error);
+    }
+  }
+  
   // API Routes
   
   // Get all products
