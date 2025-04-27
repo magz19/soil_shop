@@ -7,6 +7,7 @@ import {
   orderItems, type OrderItem, type InsertOrderItem, type OrderItemWithProduct
 } from "@shared/schema";
 import { db } from "./db";
+import { mysqlDb, isMysqlConfigured } from "./mysql-db";
 import { eq, and, asc } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
@@ -642,20 +643,50 @@ export class DatabaseStorage implements IStorage {
       if (existingProducts.length === 0) {
         console.log("Seeding initial S-Oil products...");
         
-        // We're using raw SQL for seeding to avoid column name issues
-        await db.execute(`
-          INSERT INTO products (name, description, price, "salePrice", "imageUrl", category, "inStock", rating, "reviewCount", "isPrime")
-          VALUES 
-            ('S-Oil Ultra Synthetic 5W-30 Motor Oil', 'Premium full synthetic engine oil that provides exceptional wear protection, enhanced fuel economy and outstanding engine cleanliness.', 24.99, 21.99, 'https://images.unsplash.com/photo-1635273051936-7069a5e709a2?auto=format&fit=crop&w=400&h=300', 'Motor Oil', true, 4.8, 234, true),
-            ('S-Oil Seven Dragon 10W-40 Semi-Synthetic Oil', 'Semi-synthetic oil that offers excellent protection against engine wear and tear. Ideal for high-mileage vehicles.', 19.99, 17.99, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Motor Oil', true, 4.5, 189, true),
-            ('S-Oil Transmission Fluid ATF', 'High-quality automatic transmission fluid ensuring smooth gear shifting and maximum protection for your transmission system.', 15.99, 14.50, 'https://images.unsplash.com/photo-1694487410292-94577041fddc?auto=format&fit=crop&w=400&h=300', 'Transmission Fluid', true, 4.6, 112, true),
-            ('S-Oil Brake Fluid DOT 4', 'High performance brake fluid with excellent resistance to moisture absorption. Provides reliable braking performance even under extreme conditions.', 12.99, 10.99, 'https://images.unsplash.com/photo-1651678463794-7d991c0cf9a8?auto=format&fit=crop&w=400&h=300', 'Brake Fluid', true, 4.7, 97, true),
-            ('S-Oil Antifreeze Coolant', 'All-season engine coolant that protects your cooling system from freezing and overheating. Contains anti-corrosion additives.', 14.99, 12.99, 'https://images.unsplash.com/photo-1600436518453-3c33d55326a5?auto=format&fit=crop&w=400&h=300', 'Coolant', true, 4.4, 78, true),
-            ('S-Oil Power Steering Fluid', 'Specially formulated to protect power steering systems. Prevents leaks and ensures smooth operation of the steering mechanism.', 9.99, NULL, 'https://images.unsplash.com/photo-1607200319809-6b420ae7ca22?auto=format&fit=crop&w=400&h=300', 'Steering Fluid', true, 4.3, 56, false),
-            ('S-Oil Hydraulic Oil ISO 46', 'Premium hydraulic oil that provides excellent wear protection and oxidation stability for hydraulic systems operating under high pressure.', 29.99, 25.99, 'https://images.unsplash.com/photo-1613361581093-2bbf4b19275e?auto=format&fit=crop&w=400&h=300', 'Hydraulic Oil', true, 4.9, 45, true),
-            ('S-Oil Industrial Grease', 'Multi-purpose lubricating grease for industrial and automotive applications. Provides excellent protection against wear, water, and heat.', 8.99, 7.50, 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&h=300', 'Grease', true, 4.6, 38, false)
-        `);
-        console.log("Products seeded successfully!");
+        // Determine which database to use
+        if (isMysqlConfigured() && mysqlDb) {
+          console.log("Seeding products into MySQL database...");
+          try {
+            // We're using raw SQL for MySQL to ensure compatibility
+            await mysqlDb.execute(`
+              INSERT INTO products (name, description, price, sale_price, image_url, category, in_stock, rating, review_count, is_prime)
+              VALUES 
+                ('S-Oil Ultra Synthetic 5W-30 Motor Oil', 'Premium full synthetic engine oil that provides exceptional wear protection, enhanced fuel economy and outstanding engine cleanliness.', 24.99, 21.99, 'https://images.unsplash.com/photo-1635273051936-7069a5e709a2?auto=format&fit=crop&w=400&h=300', 'Motor Oil', true, 4.8, 234, true),
+                ('S-Oil Seven Dragon 10W-40 Semi-Synthetic Oil', 'Semi-synthetic oil that offers excellent protection against engine wear and tear. Ideal for high-mileage vehicles.', 19.99, 17.99, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Motor Oil', true, 4.5, 189, true),
+                ('S-Oil Transmission Fluid ATF', 'High-quality automatic transmission fluid ensuring smooth gear shifting and maximum protection for your transmission system.', 15.99, 14.50, 'https://images.unsplash.com/photo-1694487410292-94577041fddc?auto=format&fit=crop&w=400&h=300', 'Transmission Fluid', true, 4.6, 112, true),
+                ('S-Oil Brake Fluid DOT 4', 'High performance brake fluid with excellent resistance to moisture absorption. Provides reliable braking performance even under extreme conditions.', 12.99, 10.99, 'https://images.unsplash.com/photo-1651678463794-7d991c0cf9a8?auto=format&fit=crop&w=400&h=300', 'Brake Fluid', true, 4.7, 97, true),
+                ('S-Oil Antifreeze Coolant', 'All-season engine coolant that protects your cooling system from freezing and overheating. Contains anti-corrosion additives.', 14.99, 12.99, 'https://images.unsplash.com/photo-1600436518453-3c33d55326a5?auto=format&fit=crop&w=400&h=300', 'Coolant', true, 4.4, 78, true),
+                ('S-Oil Power Steering Fluid', 'Specially formulated to protect power steering systems. Prevents leaks and ensures smooth operation of the steering mechanism.', 9.99, NULL, 'https://images.unsplash.com/photo-1607200319809-6b420ae7ca22?auto=format&fit=crop&w=400&h=300', 'Steering Fluid', true, 4.3, 56, false),
+                ('S-Oil Hydraulic Oil ISO 46', 'Premium hydraulic oil that provides excellent wear protection and oxidation stability for hydraulic systems operating under high pressure.', 29.99, 25.99, 'https://images.unsplash.com/photo-1613361581093-2bbf4b19275e?auto=format&fit=crop&w=400&h=300', 'Hydraulic Oil', true, 4.9, 45, true),
+                ('S-Oil Industrial Grease', 'Multi-purpose lubricating grease for industrial and automotive applications. Provides excellent protection against wear, water, and heat.', 8.99, 7.50, 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&h=300', 'Grease', true, 4.6, 38, false)
+            `);
+            console.log("Products seeded successfully to MySQL!");
+          } catch (error) {
+            console.error("Error seeding MySQL products:", error);
+            throw error;
+          }
+        } else {
+          // Use PostgreSQL by default
+          console.log("Seeding products into PostgreSQL database...");
+          try {
+            await db.execute(`
+              INSERT INTO products (name, description, price, sale_price, image_url, category, in_stock, rating, review_count, is_prime)
+              VALUES 
+                ('S-Oil Ultra Synthetic 5W-30 Motor Oil', 'Premium full synthetic engine oil that provides exceptional wear protection, enhanced fuel economy and outstanding engine cleanliness.', 24.99, 21.99, 'https://images.unsplash.com/photo-1635273051936-7069a5e709a2?auto=format&fit=crop&w=400&h=300', 'Motor Oil', true, 4.8, 234, true),
+                ('S-Oil Seven Dragon 10W-40 Semi-Synthetic Oil', 'Semi-synthetic oil that offers excellent protection against engine wear and tear. Ideal for high-mileage vehicles.', 19.99, 17.99, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Motor Oil', true, 4.5, 189, true),
+                ('S-Oil Transmission Fluid ATF', 'High-quality automatic transmission fluid ensuring smooth gear shifting and maximum protection for your transmission system.', 15.99, 14.50, 'https://images.unsplash.com/photo-1694487410292-94577041fddc?auto=format&fit=crop&w=400&h=300', 'Transmission Fluid', true, 4.6, 112, true),
+                ('S-Oil Brake Fluid DOT 4', 'High performance brake fluid with excellent resistance to moisture absorption. Provides reliable braking performance even under extreme conditions.', 12.99, 10.99, 'https://images.unsplash.com/photo-1651678463794-7d991c0cf9a8?auto=format&fit=crop&w=400&h=300', 'Brake Fluid', true, 4.7, 97, true),
+                ('S-Oil Antifreeze Coolant', 'All-season engine coolant that protects your cooling system from freezing and overheating. Contains anti-corrosion additives.', 14.99, 12.99, 'https://images.unsplash.com/photo-1600436518453-3c33d55326a5?auto=format&fit=crop&w=400&h=300', 'Coolant', true, 4.4, 78, true),
+                ('S-Oil Power Steering Fluid', 'Specially formulated to protect power steering systems. Prevents leaks and ensures smooth operation of the steering mechanism.', 9.99, NULL, 'https://images.unsplash.com/photo-1607200319809-6b420ae7ca22?auto=format&fit=crop&w=400&h=300', 'Steering Fluid', true, 4.3, 56, false),
+                ('S-Oil Hydraulic Oil ISO 46', 'Premium hydraulic oil that provides excellent wear protection and oxidation stability for hydraulic systems operating under high pressure.', 29.99, 25.99, 'https://images.unsplash.com/photo-1613361581093-2bbf4b19275e?auto=format&fit=crop&w=400&h=300', 'Hydraulic Oil', true, 4.9, 45, true),
+                ('S-Oil Industrial Grease', 'Multi-purpose lubricating grease for industrial and automotive applications. Provides excellent protection against wear, water, and heat.', 8.99, 7.50, 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&h=300', 'Grease', true, 4.6, 38, false)
+            `);
+            console.log("Products seeded successfully to PostgreSQL!");
+          } catch (error) {
+            console.error("Error seeding PostgreSQL products:", error);
+            throw error;
+          }
+        }
       } else {
         console.log("Products already exist, skipping seed.");
       }

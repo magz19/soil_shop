@@ -34,26 +34,26 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: real("price").notNull(),
-  salePrice: real("sale_price"),
-  imageUrl: text("image_url").notNull(),
+  sale_price: real("sale_price"),
+  image_url: text("image_url").notNull(),
   category: text("category").notNull(),
-  inStock: boolean("in_stock").notNull().default(true),
+  in_stock: boolean("in_stock").notNull().default(true),
   rating: real("rating"),
-  reviewCount: integer("review_count"),
-  isPrime: boolean("is_prime").notNull().default(false),
+  review_count: integer("review_count"),
+  is_prime: boolean("is_prime").notNull().default(false),
 });
 
 export const insertProductSchema = createInsertSchema(products).pick({
   name: true,
   description: true,
   price: true,
-  salePrice: true,
-  imageUrl: true,
+  sale_price: true,
+  image_url: true,
   category: true,
-  inStock: true,
+  in_stock: true,
   rating: true,
-  reviewCount: true,
-  isPrime: true,
+  review_count: true,
+  is_prime: true,
 });
 
 // Cart schema
