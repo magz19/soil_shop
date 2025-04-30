@@ -1,467 +1,741 @@
 <?php
-// Get user cart
-$userId = 1; // Default user ID for now (until we implement authentication)
-$cart = getCartWithProducts($userId);
-
-// If cart is empty or doesn't exist, redirect to cart page
-if (!$cart || empty($cart['items'])) {
-    echo '<script>window.location.href = "index.php?page=cart";</script>';
-    exit;
+// Include helper functions if not already included
+if (!function_exists('formatPrice')) {
+    require_once 'includes/functions.php';
 }
 
-// Initialize variables
-$cartItems = $cart['items'];
+// Get cart items from session
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+
+$cartItems = $_SESSION['cart'];
+
+// Calculate cart totals
 $subtotal = 0;
-
-// Calculate subtotal
 foreach ($cartItems as $item) {
-    $price = !empty($item['product']['sale_price']) ? $item['product']['sale_price'] : $item['product']['price'];
-    $subtotal += $price * $item['quantity'];
+    $subtotal += $item['price'] * $item['quantity'];
 }
 
-// Determine current step
-$currentStep = isset($_GET['step']) ? $_GET['step'] : 'shipping';
+$total = $subtotal; // No shipping cost as per requirements
+
+// Initialize shipping and payment method
+$shippingMethod = isset($_SESSION['checkout_shipping_method']) ? $_SESSION['checkout_shipping_method'] : '';
+$paymentMethod = isset($_SESSION['checkout_payment_method']) ? $_SESSION['checkout_payment_method'] : '';
+
+// Initialize checkout step
+$checkoutStep = isset($_SESSION['checkout_step']) ? $_SESSION['checkout_step'] : 'shipping';
+
+// Process form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Shipping form submitted
+    if (isset($_POST['shipping_step'])) {
+        $shippingMethod = isset($_POST['shipping_method']) ? $_POST['shipping_method'] : '';
+        
+        if (!empty($shippingMethod)) {
+            // Save form data to session
+            $_SESSION['checkout_shipping_method'] = $shippingMethod;
+            $_SESSION['checkout_step'] = 'payment';
+            $checkoutStep = 'payment';
+            
+            // Save shipping address if delivery is selected
+            if ($shippingMethod === 'delivery') {
+                $_SESSION['checkout_shipping_address'] = [
+                    'name' => isset($_POST['name']) ? $_POST['name'] : '',
+                    'email' => isset($_POST['email']) ? $_POST['email'] : '',
+                    'phone' => isset($_POST['phone']) ? $_POST['phone'] : '',
+                    'address' => isset($_POST['address']) ? $_POST['address'] : '',
+                    'city' => isset($_POST['city']) ? $_POST['city'] : '',
+                    'state' => isset($_POST['state']) ? $_POST['state'] : '',
+                    'zip' => isset($_POST['zip']) ? $_POST['zip'] : ''
+                ];
+            } else {
+                // For pickup, just save name, email, phone
+                $_SESSION['checkout_shipping_address'] = [
+                    'name' => isset($_POST['name']) ? $_POST['name'] : '',
+                    'email' => isset($_POST['email']) ? $_POST['email'] : '',
+                    'phone' => isset($_POST['phone']) ? $_POST['phone'] : ''
+                ];
+            }
+        } else {
+            $shippingError = 'Please select a shipping method.';
+        }
+    }
+    
+    // Payment form submitted
+    if (isset($_POST['payment_step'])) {
+        $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : '';
+        
+        if (!empty($paymentMethod)) {
+            // Save payment method to session
+            $_SESSION['checkout_payment_method'] = $paymentMethod;
+            
+            // Process payment screenshot upload if GCash is selected
+            if ($paymentMethod === 'gcash' && isset($_FILES['payment_screenshot']) && $_FILES['payment_screenshot']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = 'uploads/payments/';
+                
+                // Create directory if it doesn't exist
+                if (!file_exists($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                
+                $fileName = time() . '_' . basename($_FILES['payment_screenshot']['name']);
+                $uploadPath = $uploadDir . $fileName;
+                
+                if (move_uploaded_file($_FILES['payment_screenshot']['tmp_name'], $uploadPath)) {
+                    $_SESSION['checkout_payment_screenshot'] = $uploadPath;
+                } else {
+                    $paymentError = 'Failed to upload payment screenshot. Please try again.';
+                    $checkoutStep = 'payment';
+                }
+            }
+            
+            // If payment is valid, proceed to review step
+            if (!isset($paymentError)) {
+                $_SESSION['checkout_step'] = 'review';
+                $checkoutStep = 'review';
+            }
+        } else {
+            $paymentError = 'Please select a payment method.';
+        }
+    }
+    
+    // Order placement form submitted
+    if (isset($_POST['place_order'])) {
+        if (empty($cartItems)) {
+            $orderError = 'Your cart is empty. Please add some products to your cart before placing an order.';
+        } else {
+            // Create order in database
+            $order = createOrder([
+                'user_id' => $_SESSION['user_id'] ?? 1,
+                'total' => $total,
+                'status' => 'pending',
+                'payment_method' => $_SESSION['checkout_payment_method'],
+                'payment_screenshot' => $_SESSION['checkout_payment_screenshot'] ?? '',
+                'shipping_method' => $_SESSION['checkout_shipping_method'],
+                'shipping_address' => $_SESSION['checkout_shipping_address']['address'] ?? '',
+                'shipping_city' => $_SESSION['checkout_shipping_address']['city'] ?? '',
+                'shipping_state' => $_SESSION['checkout_shipping_address']['state'] ?? '',
+                'shipping_zip' => $_SESSION['checkout_shipping_address']['zip'] ?? '',
+                'customer_name' => $_SESSION['checkout_shipping_address']['name'],
+                'customer_email' => $_SESSION['checkout_shipping_address']['email'],
+                'customer_phone' => $_SESSION['checkout_shipping_address']['phone'],
+                'notes' => $_POST['notes'] ?? ''
+            ]);
+            
+            if ($order) {
+                // Store order ID in session
+                $_SESSION['last_order_id'] = $order['id'];
+                
+                // Clear cart and checkout session data
+                $_SESSION['cart'] = [];
+                $_SESSION['cart_count'] = 0;
+                unset($_SESSION['checkout_step']);
+                unset($_SESSION['checkout_shipping_method']);
+                unset($_SESSION['checkout_shipping_address']);
+                unset($_SESSION['checkout_payment_method']);
+                unset($_SESSION['checkout_payment_screenshot']);
+                
+                // Redirect to order confirmation page
+                header('Location: index.php?page=order-confirmation');
+                exit;
+            } else {
+                $orderError = 'Failed to create order. Please try again.';
+            }
+        }
+    }
+}
+
+// Helper function to check if checkout step is active
+function isStepActive($step, $currentStep) {
+    return $step === $currentStep;
+}
+
+// Helper function to check if checkout step is completed
+function isStepCompleted($step, $currentStep) {
+    $steps = ['shipping', 'payment', 'review'];
+    $currentIndex = array_search($currentStep, $steps);
+    $stepIndex = array_search($step, $steps);
+    
+    return $stepIndex < $currentIndex;
+}
+
+// Helper function to create order
+function createOrder($orderData) {
+    global $conn;
+    
+    // Sample order creation for development
+    if (DEVELOPMENT_MODE && !isset($conn)) {
+        $orderId = time();
+        $order = [
+            'id' => $orderId,
+            'user_id' => $orderData['user_id'],
+            'total' => $orderData['total'],
+            'status' => $orderData['status'],
+            'payment_method' => $orderData['payment_method'],
+            'payment_screenshot' => $orderData['payment_screenshot'],
+            'shipping_method' => $orderData['shipping_method'],
+            'shipping_address' => $orderData['shipping_address'],
+            'shipping_city' => $orderData['shipping_city'],
+            'shipping_state' => $orderData['shipping_state'],
+            'shipping_zip' => $orderData['shipping_zip'],
+            'customer_name' => $orderData['customer_name'],
+            'customer_email' => $orderData['customer_email'],
+            'customer_phone' => $orderData['customer_phone'],
+            'notes' => $orderData['notes'],
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        return $order;
+    }
+    
+    try {
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        // Insert order
+        $sql = "INSERT INTO orders (
+                    user_id, total, status, payment_method, payment_screenshot, 
+                    shipping_method, shipping_address, shipping_city, shipping_state, 
+                    shipping_zip, customer_name, customer_email, customer_phone, notes, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param(
+            "idssssssssssss",
+            $orderData['user_id'],
+            $orderData['total'],
+            $orderData['status'],
+            $orderData['payment_method'],
+            $orderData['payment_screenshot'],
+            $orderData['shipping_method'],
+            $orderData['shipping_address'],
+            $orderData['shipping_city'],
+            $orderData['shipping_state'],
+            $orderData['shipping_zip'],
+            $orderData['customer_name'],
+            $orderData['customer_email'],
+            $orderData['customer_phone'],
+            $orderData['notes']
+        );
+        
+        $stmt->execute();
+        $orderId = $conn->insert_id;
+        
+        // Insert order items from cart
+        $cartItems = $_SESSION['cart'];
+        foreach ($cartItems as $item) {
+            $sql = "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("iiid", $orderId, $item['product_id'], $item['quantity'], $item['price']);
+            $stmt->execute();
+        }
+        
+        // Commit transaction
+        $conn->commit();
+        
+        // Return created order
+        return [
+            'id' => $orderId,
+            'user_id' => $orderData['user_id'],
+            'total' => $orderData['total'],
+            'status' => $orderData['status'],
+            'payment_method' => $orderData['payment_method'],
+            'payment_screenshot' => $orderData['payment_screenshot'],
+            'shipping_method' => $orderData['shipping_method'],
+            'shipping_address' => $orderData['shipping_address'],
+            'shipping_city' => $orderData['shipping_city'],
+            'shipping_state' => $orderData['shipping_state'],
+            'shipping_zip' => $orderData['shipping_zip'],
+            'customer_name' => $orderData['customer_name'],
+            'customer_email' => $orderData['customer_email'],
+            'customer_phone' => $orderData['customer_phone'],
+            'notes' => $orderData['notes'],
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $conn->rollback();
+        
+        // Log error
+        error_log("Order creation error: " . $e->getMessage());
+        
+        // Return false on error
+        return false;
+    }
+}
 ?>
 
 <div class="container">
-    <h1 class="mb-4">Checkout</h1>
-    
-    <!-- Checkout Progress -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between checkout-progress">
-                <div class="checkout-step <?php echo in_array($currentStep, ['shipping', 'payment', 'review']) ? 'active' : ''; ?>">
-                    <div class="step-number">1</div>
-                    <div class="step-label">Shipping</div>
-                </div>
-                <div class="checkout-step <?php echo in_array($currentStep, ['payment', 'review']) ? 'active' : ''; ?>">
-                    <div class="step-number">2</div>
-                    <div class="step-label">Payment</div>
-                </div>
-                <div class="checkout-step <?php echo $currentStep == 'review' ? 'active' : ''; ?>">
-                    <div class="step-number">3</div>
-                    <div class="step-label">Review & Place Order</div>
-                </div>
-            </div>
+            <h1 class="mb-4">Checkout</h1>
         </div>
     </div>
     
-    <div class="row">
-        <!-- Main Content -->
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <?php if ($currentStep == 'shipping'): ?>
-                        <!-- Shipping Step -->
-                        <h3 class="mb-4">Shipping Information</h3>
-                        
-                        <form action="actions/process_shipping.php" method="post">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="full_name" class="form-label">Full Name</label>
-                                    <input type="text" class="form-control" id="full_name" name="full_name" required>
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label for="phone" class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" id="phone" name="phone" required>
-                                </div>
-                                
-                                <div class="col-12">
-                                    <label for="email" class="form-label">Email Address</label>
-                                    <input type="email" class="form-control" id="email" name="email" required>
-                                </div>
-                                
-                                <div class="col-12">
-                                    <label for="address" class="form-label">Address</label>
-                                    <input type="text" class="form-control" id="address" name="address" required>
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label for="city" class="form-label">City</label>
-                                    <input type="text" class="form-control" id="city" name="city" required>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <label for="state" class="form-label">State/Province</label>
-                                    <input type="text" class="form-control" id="state" name="state" required>
-                                </div>
-                                
-                                <div class="col-md-2">
-                                    <label for="zip" class="form-label">Zip Code</label>
-                                    <input type="text" class="form-control" id="zip" name="zip" required>
-                                </div>
-                                
-                                <div class="col-12 mt-4">
-                                    <h5>Shipping Options</h5>
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="radio" name="shipping_method" id="pickup" value="pickup" checked>
-                                        <label class="form-check-label" for="pickup">
-                                            <strong>Personal Pick-up</strong>
-                                            <p class="mb-0 text-muted">Pick up your order at 123 Mendiola St. Manila City</p>
-                                            <p class="mb-0 text-muted">Contact Person: Anjhela Geron 09454545</p>
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="shipping_method" id="delivery" value="delivery">
-                                        <label class="form-check-label" for="delivery">
-                                            <strong>Grab/Lalamove Delivery</strong>
-                                            <p class="mb-0 text-muted">Arranged by client</p>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12 mt-4">
-                                    <button type="submit" class="btn btn-primary">Continue to Payment</button>
-                                </div>
-                            </div>
-                        </form>
-                        
-                    <?php elseif ($currentStep == 'payment'): ?>
-                        <!-- Payment Step -->
-                        <h3 class="mb-4">Payment Method</h3>
-                        
-                        <form action="actions/process_payment.php" method="post" enctype="multipart/form-data" id="checkout-form">
-                            <div class="row g-3">
-                                <!-- Payment Options -->
-                                <div class="col-12">
-                                    <input type="hidden" name="payment_method" id="payment_method" value="">
-                                    
-                                    <div class="payment-option" data-method="gcash">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method_radio" id="gcash" value="gcash">
-                                            <label class="form-check-label" for="gcash">
-                                                <strong>GCash</strong>
-                                                <p class="mb-0 text-muted">Send payment to Martin Magno 091234567</p>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="payment-option" data-method="counter">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method_radio" id="counter" value="counter">
-                                            <label class="form-check-label" for="counter">
-                                                <strong>Over-the-counter Payment</strong>
-                                                <p class="mb-0 text-muted">Pay when you pick up your order</p>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Payment Screenshot Upload (Only for GCash) -->
-                                <div class="col-12 mt-3" id="screenshot-upload-section" style="display: none;">
-                                    <label for="payment_screenshot" class="form-label">Upload Payment Screenshot</label>
-                                    <div>
-                                        <label class="custom-file-upload">
-                                            <input type="file" name="payment_screenshot" id="payment_screenshot" accept="image/*" style="display:none;">
-                                            Choose File
-                                        </label>
-                                        <span id="file-name-display" class="ms-2"></span>
-                                    </div>
-                                    <small class="text-muted">Please upload a screenshot of your GCash payment</small>
-                                </div>
-                                
-                                <div class="col-12 mt-4">
-                                    <button type="submit" class="btn btn-primary">Continue to Review</button>
-                                </div>
-                            </div>
-                        </form>
-                        
-                    <?php elseif ($currentStep == 'review'): ?>
-                        <!-- Review Step -->
-                        <h3 class="mb-4">Order Review</h3>
-                        
-                        <?php
-                        // Get shipping details from session
-                        $shipping = isset($_SESSION['checkout_shipping']) ? $_SESSION['checkout_shipping'] : null;
-                        $payment = isset($_SESSION['checkout_payment']) ? $_SESSION['checkout_payment'] : null;
-                        
-                        if (!$shipping || !$payment) {
-                            echo '<div class="alert alert-danger">Shipping or payment information missing. Please go back to previous steps.</div>';
-                        } else {
-                        ?>
-                            <!-- Shipping Information -->
-                            <div class="card mb-4">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Shipping Information</h5>
-                                    <a href="index.php?page=checkout&step=shipping" class="btn btn-sm btn-outline-primary">Edit</a>
-                                </div>
-                                <div class="card-body">
-                                    <p><strong><?php echo htmlspecialchars($shipping['full_name']); ?></strong></p>
-                                    <p><?php echo htmlspecialchars($shipping['address']); ?></p>
-                                    <p><?php echo htmlspecialchars($shipping['city']) . ', ' . htmlspecialchars($shipping['state']) . ' ' . htmlspecialchars($shipping['zip']); ?></p>
-                                    <p>Phone: <?php echo htmlspecialchars($shipping['phone']); ?></p>
-                                    <p>Email: <?php echo htmlspecialchars($shipping['email']); ?></p>
-                                    <p>Shipping Method: <?php echo $shipping['shipping_method'] == 'pickup' ? 'Personal Pick-up' : 'Grab/Lalamove Delivery'; ?></p>
-                                </div>
-                            </div>
-                            
-                            <!-- Payment Information -->
-                            <div class="card mb-4">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Payment Information</h5>
-                                    <a href="index.php?page=checkout&step=payment" class="btn btn-sm btn-outline-primary">Edit</a>
-                                </div>
-                                <div class="card-body">
-                                    <p>Payment Method: <?php echo $payment['payment_method'] == 'gcash' ? 'GCash' : 'Over-the-counter Payment'; ?></p>
-                                    
-                                    <?php if ($payment['payment_method'] == 'gcash' && !empty($payment['payment_screenshot'])): ?>
-                                        <p>Payment Screenshot: <span class="text-success">Uploaded</span></p>
-                                        <img src="<?php echo htmlspecialchars($payment['payment_screenshot']); ?>" alt="Payment Screenshot" class="img-thumbnail" style="max-width: 200px;">
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            
-                            <!-- Order Items -->
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Order Items</h5>
-                                </div>
-                                <div class="card-body">
-                                    <?php foreach ($cartItems as $item): ?>
-                                        <div class="d-flex mb-3 pb-3 border-bottom">
-                                            <img src="<?php echo htmlspecialchars($item['product']['image_url']); ?>" alt="<?php echo htmlspecialchars($item['product']['name']); ?>" class="me-3" style="width: 60px; height: 60px; object-fit: contain;">
-                                            
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-0"><?php echo htmlspecialchars($item['product']['name']); ?></h6>
-                                                <div class="text-muted">Quantity: <?php echo $item['quantity']; ?></div>
-                                            </div>
-                                            
-                                            <div class="text-end">
-                                                <?php 
-                                                $price = !empty($item['product']['sale_price']) ? $item['product']['sale_price'] : $item['product']['price'];
-                                                $totalPrice = $price * $item['quantity'];
-                                                echo formatPrice($totalPrice); 
-                                                ?>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                            
-                            <form action="actions/place_order.php" method="post">
-                                <button type="submit" class="btn btn-warning btn-lg w-100">Place Order</button>
-                            </form>
-                        <?php } ?>
-                    <?php endif; ?>
+    <?php if (empty($cartItems)): ?>
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-5x text-muted mb-4"></i>
+            <h3>Your cart is empty</h3>
+            <p class="text-muted mb-4">Add some products to your cart and they will appear here</p>
+            <a href="index.php?page=products" class="btn btn-primary px-4">
+                <i class="fas fa-shopping-bag me-2"></i> Continue Shopping
+            </a>
+        </div>
+    <?php else: ?>
+        <!-- Checkout Progress -->
+        <div class="d-flex justify-content-center mb-5 checkout-progress">
+            <div class="step <?php echo isStepActive('shipping', $checkoutStep) ? 'active' : ''; ?> <?php echo isStepCompleted('shipping', $checkoutStep) ? 'completed' : ''; ?>">
+                <div class="step-icon">
+                    <i class="fas fa-truck"></i>
                 </div>
+                <div class="step-label">Shipping</div>
+            </div>
+            <div class="step <?php echo isStepActive('payment', $checkoutStep) ? 'active' : ''; ?> <?php echo isStepCompleted('payment', $checkoutStep) ? 'completed' : ''; ?>">
+                <div class="step-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div class="step-label">Payment</div>
+            </div>
+            <div class="step <?php echo isStepActive('review', $checkoutStep) ? 'active' : ''; ?>">
+                <div class="step-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="step-label">Review</div>
             </div>
         </div>
         
-        <!-- Order Summary -->
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Order Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal (<?php echo count($cartItems); ?> items)</span>
-                        <span><?php echo formatPrice($subtotal); ?></span>
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Shipping Step -->
+                <?php if ($checkoutStep === 'shipping'): ?>
+                    <div class="card border-0 rounded-4 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Shipping Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if (isset($shippingError)): ?>
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="fas fa-exclamation-circle me-2"></i> <?php echo $shippingError; ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <form method="post" id="shipping-form">
+                                <input type="hidden" name="shipping_step" value="1">
+                                
+                                <div class="mb-4">
+                                    <h6>Personal Information</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <div class="form-floating">
+                                                <input type="text" class="form-control" id="name" name="name" placeholder="Full Name" required value="<?php echo $_SESSION['checkout_shipping_address']['name'] ?? ''; ?>">
+                                                <label for="name">Full Name</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-floating">
+                                                <input type="email" class="form-control" id="email" name="email" placeholder="Email" required value="<?php echo $_SESSION['checkout_shipping_address']['email'] ?? ''; ?>">
+                                                <label for="email">Email</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-floating">
+                                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="Phone" required value="<?php echo $_SESSION['checkout_shipping_address']['phone'] ?? ''; ?>">
+                                                <label for="phone">Phone</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h6>Shipping Method</h6>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="shipping_method" id="pickup" value="pickup" <?php echo ($shippingMethod === 'pickup') ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="pickup">
+                                            <strong>Personal Pick-up</strong> - Pick up your order at our store
+                                        </label>
+                                        <div class="ms-4 mt-2 text-muted small">
+                                            <p class="mb-0">Address: 123 Mendiola St. Manila City</p>
+                                            <p class="mb-0">Contact Person: Anjhela Geron 09454545</p>
+                                        </div>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="shipping_method" id="delivery" value="delivery" <?php echo ($shippingMethod === 'delivery') ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="delivery">
+                                            <strong>Grab/Lalamove Delivery</strong> - Arrange your own delivery
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div id="delivery-address" class="mb-4 <?php echo ($shippingMethod === 'delivery') ? '' : 'd-none'; ?>">
+                                    <h6>Delivery Address</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <div class="form-floating">
+                                                <input type="text" class="form-control" id="address" name="address" placeholder="Address" value="<?php echo $_SESSION['checkout_shipping_address']['address'] ?? ''; ?>">
+                                                <label for="address">Address</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="form-floating">
+                                                <input type="text" class="form-control" id="city" name="city" placeholder="City" value="<?php echo $_SESSION['checkout_shipping_address']['city'] ?? ''; ?>">
+                                                <label for="city">City</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-floating">
+                                                <input type="text" class="form-control" id="state" name="state" placeholder="State/Province" value="<?php echo $_SESSION['checkout_shipping_address']['state'] ?? ''; ?>">
+                                                <label for="state">State/Province</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <input type="text" class="form-control" id="zip" name="zip" placeholder="Zip Code" value="<?php echo $_SESSION['checkout_shipping_address']['zip'] ?? ''; ?>">
+                                                <label for="zip">Zip Code</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        Continue to Payment <i class="fas fa-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                     
-                    <hr>
-                    
-                    <div class="d-flex justify-content-between mb-4">
-                        <span class="fw-bold">Total</span>
-                        <span class="fw-bold"><?php echo formatPrice($subtotal); ?></span>
+                <?php elseif ($checkoutStep === 'payment'): ?>
+                    <!-- Payment Step -->
+                    <div class="card border-0 rounded-4 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Payment Method</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if (isset($paymentError)): ?>
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="fas fa-exclamation-circle me-2"></i> <?php echo $paymentError; ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <form method="post" id="payment-form" enctype="multipart/form-data">
+                                <input type="hidden" name="payment_step" value="1">
+                                
+                                <div class="mb-4">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="gcash" value="gcash" <?php echo ($paymentMethod === 'gcash') ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="gcash">
+                                            <strong>GCash</strong> - Pay using GCash mobile wallet
+                                        </label>
+                                        <div class="ms-4 mt-2 text-muted small">
+                                            <p class="mb-0">Account Name: Martin Magno</p>
+                                            <p class="mb-0">GCash Number: 091234567</p>
+                                            <p class="mb-0">Please upload a screenshot of your payment</p>
+                                        </div>
+                                    </div>
+                                    <div id="gcash-screenshot" class="ms-4 mb-3 <?php echo ($paymentMethod === 'gcash') ? '' : 'd-none'; ?>">
+                                        <div class="mb-3">
+                                            <label for="payment_screenshot" class="form-label">Payment Screenshot</label>
+                                            <input class="form-control" type="file" id="payment_screenshot" name="payment_screenshot" accept="image/*">
+                                        </div>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="payment_method" id="otc" value="otc" <?php echo ($paymentMethod === 'otc') ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="otc">
+                                            <strong>Over-the-counter Payment</strong> - Pay when you pick up your order
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between mt-4">
+                                    <a href="index.php?page=checkout" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i> Back to Shipping
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        Continue to Review <i class="fas fa-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                    
+                <?php elseif ($checkoutStep === 'review'): ?>
+                    <!-- Review Step -->
+                    <div class="card border-0 rounded-4 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Order Review</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if (isset($orderError)): ?>
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="fas fa-exclamation-circle me-2"></i> <?php echo $orderError; ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="mb-4">
+                                <h6>Personal Information</h6>
+                                <p class="mb-0"><strong>Name:</strong> <?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['name']); ?></p>
+                                <p class="mb-0"><strong>Email:</strong> <?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['email']); ?></p>
+                                <p><strong>Phone:</strong> <?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['phone']); ?></p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6>Shipping Method</h6>
+                                <p>
+                                    <?php if ($_SESSION['checkout_shipping_method'] === 'pickup'): ?>
+                                        <strong>Personal Pick-up</strong>
+                                        <div class="text-muted small">
+                                            <p class="mb-0">Address: 123 Mendiola St. Manila City</p>
+                                            <p class="mb-0">Contact Person: Anjhela Geron 09454545</p>
+                                        </div>
+                                    <?php else: ?>
+                                        <strong>Grab/Lalamove Delivery</strong>
+                                        <div class="text-muted small">
+                                            <p class="mb-0"><?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['address']); ?></p>
+                                            <p class="mb-0">
+                                                <?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['city']); ?>, 
+                                                <?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['state']); ?> 
+                                                <?php echo htmlspecialchars($_SESSION['checkout_shipping_address']['zip']); ?>
+                                            </p>
+                                        </div>
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6>Payment Method</h6>
+                                <p>
+                                    <?php if ($_SESSION['checkout_payment_method'] === 'gcash'): ?>
+                                        <strong>GCash</strong>
+                                        <?php if (isset($_SESSION['checkout_payment_screenshot']) && !empty($_SESSION['checkout_payment_screenshot'])): ?>
+                                            <div class="mt-2">
+                                                <img src="<?php echo htmlspecialchars($_SESSION['checkout_payment_screenshot']); ?>" alt="Payment Screenshot" class="img-thumbnail" style="max-width: 200px;">
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <strong>Over-the-counter Payment</strong>
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6>Order Items</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Product</th>
+                                                <th class="text-center">Price</th>
+                                                <th class="text-center">Quantity</th>
+                                                <th class="text-end">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($cartItems as $item): ?>
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img src="<?php echo htmlspecialchars($item['image_url']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="me-3" style="width: 50px; height: 50px; object-fit: contain;">
+                                                            <div>
+                                                                <h6 class="mb-0"><?php echo htmlspecialchars($item['name']); ?></h6>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><?php echo formatPrice($item['price']); ?></td>
+                                                    <td class="text-center"><?php echo $item['quantity']; ?></td>
+                                                    <td class="text-end"><?php echo formatPrice($item['price'] * $item['quantity']); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <form method="post" id="place-order-form">
+                                <div class="mb-4">
+                                    <h6>Order Notes (Optional)</h6>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Add any special instructions or notes for your order"></textarea>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between mt-4">
+                                    <a href="index.php?page=checkout" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i> Back to Payment
+                                    </a>
+                                    <button type="submit" name="place_order" class="btn btn-primary">
+                                        <i class="fas fa-shopping-cart me-2"></i> Place Order
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
             
-            <!-- Order Items Preview -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Items in Your Order</h5>
-                </div>
-                <div class="card-body">
-                    <?php foreach ($cartItems as $item): ?>
-                        <div class="d-flex mb-3 pb-3 border-bottom">
-                            <img src="<?php echo htmlspecialchars($item['product']['image_url']); ?>" alt="<?php echo htmlspecialchars($item['product']['name']); ?>" class="me-3" style="width: 50px; height: 50px; object-fit: contain;">
-                            
-                            <div>
-                                <h6 class="mb-0"><?php echo htmlspecialchars($item['product']['name']); ?></h6>
-                                <div class="text-muted">Qty: <?php echo $item['quantity']; ?></div>
-                                <div><?php echo formatPrice(!empty($item['product']['sale_price']) ? $item['product']['sale_price'] : $item['product']['price']); ?></div>
+            <!-- Order Summary -->
+            <div class="col-lg-4">
+                <div class="card border-0 rounded-4 shadow-sm mb-4 sticky-top" style="top: 20px; z-index: 100;">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Order Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h6>Items (<?php echo count($cartItems); ?>)</h6>
+                            <div class="summary-items">
+                                <?php foreach ($cartItems as $item): ?>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span><?php echo htmlspecialchars($item['name']); ?> × <?php echo $item['quantity']; ?></span>
+                                        <span><?php echo formatPrice($item['price'] * $item['quantity']); ?></span>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
-                    <?php endforeach; ?>
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal</span>
+                            <span><?php echo formatPrice($subtotal); ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Shipping</span>
+                            <span>Free</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-0">
+                            <strong>Total</strong>
+                            <strong class="text-primary h5"><?php echo formatPrice($total); ?></strong>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    <?php endif; ?>
 </div>
 
 <style>
 .checkout-progress {
     position: relative;
-    margin-bottom: 30px;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
-.checkout-progress::after {
+.checkout-progress::before {
     content: '';
     position: absolute;
-    top: 20px;
-    left: 0;
-    right: 0;
+    top: 24px;
+    left: 15%;
+    right: 15%;
     height: 2px;
     background-color: #e9ecef;
     z-index: 0;
 }
 
-.checkout-step {
+.checkout-progress .step {
+    flex: 1;
+    text-align: center;
     position: relative;
     z-index: 1;
-    text-align: center;
-    width: 33.333%;
 }
 
-.step-number {
-    width: 40px;
-    height: 40px;
+.checkout-progress .step-icon {
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    background-color: #e9ecef;
-    color: #6c757d;
+    background-color: #fff;
+    border: 2px solid #e9ecef;
+    color: #adb5bd;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 8px;
-    font-weight: bold;
+    margin: 0 auto 10px;
+    font-size: 1.2rem;
 }
 
-.checkout-step.active .step-number {
-    background-color: #007bff;
-    color: white;
-}
-
-.checkout-step.active .step-label {
-    font-weight: bold;
-    color: #212529;
-}
-
-.payment-option {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    cursor: pointer;
-}
-
-.payment-option:hover, 
-.payment-option.selected {
+.checkout-progress .step.active .step-icon {
     border-color: #007bff;
-    background-color: #f8f9fa;
+    color: #007bff;
+}
+
+.checkout-progress .step.completed .step-icon {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #fff;
+}
+
+.checkout-progress .step-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.checkout-progress .step.active .step-label {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.checkout-progress .step.completed .step-label {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.summary-items {
+    max-height: 200px;
+    overflow-y: auto;
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Payment method selection
-    const paymentOptions = document.querySelectorAll('.payment-option');
-    const paymentMethodInput = document.getElementById('payment_method');
-    const paymentRadios = document.querySelectorAll('input[name="payment_method_radio"]');
-    const screenshotUploadSection = document.getElementById('screenshot-upload-section');
+    // Shipping method toggle for delivery address
+    const pickupRadio = document.getElementById('pickup');
+    const deliveryRadio = document.getElementById('delivery');
+    const deliveryAddressSection = document.getElementById('delivery-address');
     
-    paymentOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remove selected class from all options
-            paymentOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Add selected class to clicked option
-            this.classList.add('selected');
-            
-            // Get method from data attribute
-            const method = this.getAttribute('data-method');
-            
-            // Update hidden input value
-            if (paymentMethodInput) {
-                paymentMethodInput.value = method;
-            }
-            
-            // Check the corresponding radio button
-            const radio = this.querySelector('input[type="radio"]');
-            if (radio) {
-                radio.checked = true;
-            }
-            
-            // Show/hide screenshot upload section
-            if (screenshotUploadSection) {
-                if (method === 'gcash') {
-                    screenshotUploadSection.style.display = 'block';
-                } else {
-                    screenshotUploadSection.style.display = 'none';
-                }
-            }
-        });
-    });
-    
-    // Also trigger change on radio button click
-    paymentRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            const method = this.value;
-            
-            // Update hidden input
-            if (paymentMethodInput) {
-                paymentMethodInput.value = method;
-            }
-            
-            // Update selected class
-            paymentOptions.forEach(opt => {
-                if (opt.getAttribute('data-method') === method) {
-                    opt.classList.add('selected');
-                } else {
-                    opt.classList.remove('selected');
-                }
-            });
-            
-            // Show/hide screenshot upload
-            if (screenshotUploadSection) {
-                if (method === 'gcash') {
-                    screenshotUploadSection.style.display = 'block';
-                } else {
-                    screenshotUploadSection.style.display = 'none';
-                }
-            }
-        });
-    });
-    
-    // File upload
-    const fileInput = document.getElementById('payment_screenshot');
-    const fileNameDisplay = document.getElementById('file-name-display');
-    
-    if (fileInput && fileNameDisplay) {
-        fileInput.addEventListener('change', function() {
-            if (fileInput.files.length > 0) {
-                fileNameDisplay.textContent = fileInput.files[0].name;
-                fileNameDisplay.classList.add('file-upload-success');
+    if (pickupRadio && deliveryRadio && deliveryAddressSection) {
+        const toggleAddressSection = function() {
+            if (deliveryRadio.checked) {
+                deliveryAddressSection.classList.remove('d-none');
+                
+                // Make address fields required
+                const addressFields = deliveryAddressSection.querySelectorAll('input');
+                addressFields.forEach(field => field.setAttribute('required', ''));
             } else {
-                fileNameDisplay.textContent = '';
-                fileNameDisplay.classList.remove('file-upload-success');
+                deliveryAddressSection.classList.add('d-none');
+                
+                // Remove required attribute from address fields
+                const addressFields = deliveryAddressSection.querySelectorAll('input');
+                addressFields.forEach(field => field.removeAttribute('required'));
             }
-        });
+        };
+        
+        pickupRadio.addEventListener('change', toggleAddressSection);
+        deliveryRadio.addEventListener('change', toggleAddressSection);
     }
     
-    // Form validation
-    const checkoutForm = document.getElementById('checkout-form');
+    // Payment method toggle for GCash screenshot
+    const gcashRadio = document.getElementById('gcash');
+    const otcRadio = document.getElementById('otc');
+    const gcashScreenshotSection = document.getElementById('gcash-screenshot');
     
-    if (checkoutForm) {
-        checkoutForm.addEventListener('submit', function(event) {
-            const paymentMethod = paymentMethodInput.value;
-            
-            // Validate payment method selection
-            if (!paymentMethod) {
-                event.preventDefault();
-                alert('Please select a payment method');
-                return false;
+    if (gcashRadio && otcRadio && gcashScreenshotSection) {
+        const toggleScreenshotSection = function() {
+            if (gcashRadio.checked) {
+                gcashScreenshotSection.classList.remove('d-none');
+                
+                // Make screenshot field required
+                const screenshotField = document.getElementById('payment_screenshot');
+                screenshotField.setAttribute('required', '');
+            } else {
+                gcashScreenshotSection.classList.add('d-none');
+                
+                // Remove required attribute from screenshot field
+                const screenshotField = document.getElementById('payment_screenshot');
+                screenshotField.removeAttribute('required');
             }
-            
-            // Validate payment screenshot for GCash payments
-            if (paymentMethod === 'gcash' && fileInput && fileInput.files.length === 0) {
-                event.preventDefault();
-                alert('Please upload a payment screenshot');
-                return false;
-            }
-        });
+        };
+        
+        gcashRadio.addEventListener('change', toggleScreenshotSection);
+        otcRadio.addEventListener('change', toggleScreenshotSection);
     }
 });
 </script>
