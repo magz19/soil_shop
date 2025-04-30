@@ -1,20 +1,3 @@
-<?php
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Include the database connection and functions
-require_once 'includes/db_connection.php';
-
-// Get the page from URL
-$page = isset($_GET['page']) ? $_GET['page'] : 'home';
-
-// Get cart item count for the current user
-$userId = 1; // Default user ID for now (until we implement authentication)
-$cart = getCartWithProducts($userId);
-$cartItemCount = $cart ? count($cart['items']) : 0;
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -32,74 +15,86 @@ $cartItemCount = $cart ? count($cart['items']) : 0;
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container">
-            <!-- Brand -->
-            <a class="navbar-brand" href="index.php">
-                <span class="text-warning">S-Oil</span> Products
-            </a>
-            
-            <!-- Navbar Toggler -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <!-- Navbar Links -->
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link <?php echo $page === 'home' ? 'active' : ''; ?>" href="index.php">Home</a>
-                    </li>
-                    
-                    <!-- Dynamic Categories -->
-                    <?php
-                    $categories = [];
-                    $products = getAllProducts();
-                    
-                    // Extract unique categories
-                    foreach ($products as $product) {
-                        if (!in_array($product['category'], $categories)) {
-                            $categories[] = $product['category'];
-                        }
-                    }
-                    
-                    // Display top categories (up to 4)
-                    $topCategories = array_slice($categories, 0, 4);
-                    foreach ($topCategories as $category) {
-                        $isActive = isset($_GET['category']) && $_GET['category'] === $category;
-                        echo '<li class="nav-item">';
-                        echo '<a class="nav-link ' . ($isActive ? 'active' : '') . '" href="index.php?page=home&category=' . urlencode($category) . '">' . htmlspecialchars($category) . '</a>';
-                        echo '</li>';
-                    }
-                    ?>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link <?php echo $page === 'orders' ? 'active' : ''; ?>" href="index.php?page=orders">My Orders</a>
-                    </li>
-                </ul>
+    <!-- Header -->
+    <header class="sticky-top">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+            <div class="container">
+                <a class="navbar-brand" href="index.php">
+                    <span class="fw-bold text-warning">S-Oil</span> Products
+                </a>
                 
-                <!-- Cart and User Links -->
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link <?php echo $page === 'cart' ? 'active' : ''; ?>" href="index.php?page=cart">
-                            <i class="fas fa-shopping-cart"></i> Cart
-                            <?php if ($cartItemCount > 0): ?>
-                                <span class="badge rounded-pill bg-warning text-dark ms-1"><?php echo $cartItemCount; ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </li>
-                    
-                    <!-- Admin Link (visible to admins only) -->
-                    <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
                         <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'admin' ? 'active' : ''; ?>" href="index.php?page=admin">Admin</a>
+                            <a class="nav-link <?php echo (!isset($_GET['page']) || $_GET['page'] == 'home') ? 'active' : ''; ?>" href="index.php">Home</a>
                         </li>
-                    <?php endif; ?>
-                </ul>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo (isset($_GET['page']) && $_GET['page'] == 'products') ? 'active' : ''; ?>" href="index.php?page=products">Products</a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo (isset($_GET['page']) && $_GET['page'] == 'orders') ? 'active' : ''; ?>" href="index.php?page=orders">Track Orders</a>
+                        </li>
+                    </ul>
+                    
+                    <div class="d-flex align-items-center">
+                        <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+                            <a href="index.php?page=admin" class="btn btn-warning me-2">
+                                <i class="fas fa-user-cog me-1"></i> Admin Dashboard
+                            </a>
+                            <a href="logout.php" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            </a>
+                        <?php else: ?>
+                            <a href="index.php?page=cart" class="btn btn-outline-primary position-relative me-2">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span class="cart-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    <?php
+                                    // Get cart count - in real app this would be from database
+                                    $cartCount = isset($_SESSION['cart_count']) ? $_SESSION['cart_count'] : 0;
+                                    echo $cartCount;
+                                    ?>
+                                </span>
+                            </a>
+                            <a href="login.php" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-user-cog me-1"></i> Admin
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+        
+        <?php if (isset($_GET['page']) && $_GET['page'] === 'admin'): ?>
+            <!-- Admin Navigation Bar -->
+            <div class="bg-light py-2 border-bottom">
+                <div class="container">
+                    <ul class="nav nav-pills">
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo (!isset($_GET['admin_page']) || $_GET['admin_page'] == 'dashboard') ? 'active' : ''; ?>" href="index.php?page=admin&admin_page=dashboard">
+                                <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo (isset($_GET['admin_page']) && $_GET['admin_page'] == 'orders') ? 'active' : ''; ?>" href="index.php?page=admin&admin_page=orders">
+                                <i class="fas fa-clipboard-list me-1"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo (isset($_GET['admin_page']) && $_GET['admin_page'] == 'products') ? 'active' : ''; ?>" href="index.php?page=admin&admin_page=products">
+                                <i class="fas fa-box me-1"></i> Products
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        <?php endif; ?>
+    </header>
     
     <!-- Main Content -->
     <main class="py-4">

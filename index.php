@@ -4,19 +4,18 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in (either as admin or customer)
-$isLoggedIn = isset($_SESSION['is_admin']) || isset($_SESSION['user_id']);
-if (!$isLoggedIn && basename($_SERVER['PHP_SELF']) !== 'login.php') {
-    // Redirect to login page
+// Get the page from URL
+$page = isset($_GET['page']) ? $_GET['page'] : 'home';
+
+// Check if requesting admin page and not logged in as admin
+if ($page === 'admin' && (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin'])) {
+    // Redirect to admin login page
     header('Location: login.php');
     exit;
 }
 
 // Include header
 include 'includes/header.php';
-
-// Get the page from URL
-$page = isset($_GET['page']) ? $_GET['page'] : 'home';
 
 // Determine which page to load
 switch ($page) {
