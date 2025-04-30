@@ -484,3 +484,144 @@ function getUserOrders($userId) {
 // Second declaration of getOrderWithItems removed - already defined above
 
 // Second declaration of getStatusBadgeClass removed - already defined above
+
+/**
+ * Add a new product to the database
+ */
+function addProduct($productData) {
+    global $conn;
+    
+    try {
+        // Handle image upload if present
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $targetDir = __DIR__ . '/../assets/images/products/';
+            
+            // Create directory if it doesn't exist
+            if (!file_exists($targetDir)) {
+                mkdir($targetDir, 0777, true);
+            }
+            
+            // Generate unique filename
+            $fileName = uniqid() . '_' . basename($_FILES['image']['name']);
+            $targetFile = $targetDir . $fileName;
+            
+            // Upload the file
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+                $productData['image_url'] = 'assets/images/products/' . $fileName;
+            }
+        }
+        
+        // Prepare SQL statement
+        $sql = "INSERT INTO products (name, description, price, category, stock_quantity, is_featured, image_url) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+                
+        $stmt = $conn->prepare($sql);
+        
+        // Set default values if not provided
+        $isFeatured = isset($productData['is_featured']) ? 1 : 0;
+        $stockQuantity = isset($productData['stock_quantity']) ? (int)$productData['stock_quantity'] : 0;
+        $imageUrl = isset($productData['image_url']) ? $productData['image_url'] : 'assets/images/placeholder.jpg';
+        
+        $stmt->bind_param("ssdsiss", 
+            $productData['name'], 
+            $productData['description'], 
+            $productData['price'], 
+            $productData['category'], 
+            $stockQuantity, 
+            $isFeatured, 
+            $imageUrl
+        );
+        
+        // Execute the statement
+        return $stmt->execute();
+    } catch (Exception $e) {
+        // Log error
+        error_log("Database error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Update an existing product in the database
+ */
+function updateProduct($productId, $productData) {
+    global $conn;
+    
+    try {
+        // Get existing product data
+        $existingProduct = getProduct($productId);
+        if (!$existingProduct) {
+            return false;
+        }
+        
+        // Handle image upload if present
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $targetDir = __DIR__ . '/../assets/images/products/';
+            
+            // Create directory if it doesn't exist
+            if (!file_exists($targetDir)) {
+                mkdir($targetDir, 0777, true);
+            }
+            
+            // Generate unique filename
+            $fileName = uniqid() . '_' . basename($_FILES['image']['name']);
+            $targetFile = $targetDir . $fileName;
+            
+            // Upload the file
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+                $productData['image_url'] = 'assets/images/products/' . $fileName;
+            }
+        } else {
+            // Keep existing image if no new image is uploaded
+            $productData['image_url'] = $existingProduct['image_url'];
+        }
+        
+        // Prepare SQL statement
+        $sql = "UPDATE products 
+                SET name = ?, description = ?, price = ?, category = ?, 
+                    stock_quantity = ?, is_featured = ?, image_url = ? 
+                WHERE id = ?";
+                
+        $stmt = $conn->prepare($sql);
+        
+        // Set default values if not provided
+        $isFeatured = isset($productData['is_featured']) ? 1 : 0;
+        $stockQuantity = isset($productData['stock_quantity']) ? (int)$productData['stock_quantity'] : 0;
+        
+        $stmt->bind_param("ssdsissi", 
+            $productData['name'], 
+            $productData['description'], 
+            $productData['price'], 
+            $productData['category'], 
+            $stockQuantity, 
+            $isFeatured, 
+            $productData['image_url'],
+            $productId
+        );
+        
+        // Execute the statement
+        return $stmt->execute();
+    } catch (Exception $e) {
+        // Log error
+        error_log("Database error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Delete a product from the database
+ */
+function deleteProduct($productId) {
+    global $conn;
+    
+    try {
+        $sql = "DELETE FROM products WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $productId);
+        return $stmt->execute();
+    } catch (Exception $e) {
+        // Log error
+        error_log("Database error: " . $e->getMessage());
+        return false;
+    }
+}
