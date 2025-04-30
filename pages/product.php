@@ -1,7 +1,7 @@
 <?php
 // Include helper functions if not already included
 if (!function_exists('getProduct')) {
-    require_once 'includes/functions.php';
+    require_once __DIR__ . '/../includes/functions.php';
 }
 
 // Get product ID from URL
