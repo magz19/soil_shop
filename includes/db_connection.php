@@ -4,21 +4,44 @@ function getDbConnection() {
     static $conn = null;
     
     if ($conn === null) {
-        $host = "localhost";     // XAMPP MySQL server
-        $username = "root";      // Default XAMPP username
-        $password = "";          // Default XAMPP password is empty
-        $database = "soil_shop"; // Database name
-        
-        // Create connection
-        $conn = new mysqli($host, $username, $password, $database);
-        
-        // Check connection
-        if ($conn->connect_error) {
-            die("Database connection failed: " . $conn->connect_error);
+        // Check if config file exists
+        if (file_exists(__DIR__ . '/config.php')) {
+            // Use values from config file
+            require_once __DIR__ . '/config.php';
+            $host = defined('DB_HOST') ? DB_HOST : 'localhost';
+            $username = defined('DB_USERNAME') ? DB_USERNAME : 'root';
+            $password = defined('DB_PASSWORD') ? DB_PASSWORD : '';
+            $database = defined('DB_NAME') ? DB_NAME : 'soil_shop';
+        } else {
+            // Default values
+            $host = "localhost";     // XAMPP MySQL server
+            $username = "root";      // Default XAMPP username
+            $password = "";          // Default XAMPP password is empty
+            $database = "soil_shop"; // Database name
         }
         
-        // Set UTF-8 character set
-        $conn->set_charset("utf8mb4");
+        try {
+            // Create connection
+            $conn = new mysqli($host, $username, $password, $database);
+            
+            // Check connection
+            if ($conn->connect_error) {
+                throw new Exception("Database connection failed: " . $conn->connect_error);
+            }
+            
+            // Set UTF-8 character set
+            $conn->set_charset("utf8mb4");
+        } catch (Exception $e) {
+            // Log error
+            error_log($e->getMessage());
+            
+            // Show user-friendly error
+            echo "<div style='color:red;padding:20px;'>
+                    <h3>Database Connection Error</h3>
+                    <p>Could not connect to the database. Please check your configuration or run the <a href='install.php'>installation wizard</a>.</p>
+                  </div>";
+            exit;
+        }
     }
     
     return $conn;
