@@ -1,0 +1,209 @@
+/* Custom styles for S-Oil Products Store */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* Navbar styling */
+.navbar-brand {
+    font-weight: bold;
+}
+
+.bg-dark {
+    background-color: #131921 !important;
+}
+
+.bg-secondary {
+    background-color: #232F3E !important;
+}
+
+.text-warning {
+    color: #FF9900 !important;
+}
+
+/* Product cards */
+.product-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    height: 100%;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-image {
+    height: 200px;
+    object-fit: contain;
+}
+
+.product-price {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.sale-price {
+    color: #B12704;
+}
+
+.original-price {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn-warning {
+    background-color: #FFD814;
+    border-color: #FCD200;
+    color: #000;
+}
+
+.btn-warning:hover {
+    background-color: #F7CA00;
+    border-color: #F2C200;
+    color: #000;
+}
+
+.btn-primary {
+    background-color: #007185;
+    border-color: #007185;
+}
+
+.btn-primary:hover {
+    background-color: #005f73;
+    border-color: #005f73;
+}
+
+/* Cart */
+.cart-item {
+    transition: background-color 0.3s;
+}
+
+.cart-item:hover {
+    background-color: #f8f9fa;
+}
+
+.cart-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+}
+
+/* Checkout */
+.checkout-step {
+    color: #6c757d;
+}
+
+.checkout-step.active {
+    color: #131921;
+    font-weight: bold;
+}
+
+.checkout-step.completed {
+    color: #28a745;
+}
+
+/* Payment options */
+.payment-option {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.payment-option:hover,
+.payment-option.selected {
+    border-color: #007185;
+}
+
+/* Admin dashboard */
+.order-status {
+    font-weight: bold;
+}
+
+.status-pending {
+    color: #ffc107;
+}
+
+.status-processing {
+    color: #17a2b8;
+}
+
+.status-shipped {
+    color: #6610f2;
+}
+
+.status-out_for_delivery {
+    color: #007bff;
+}
+
+.status-delivered {
+    color: #28a745;
+}
+
+.status-cancelled {
+    color: #dc3545;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .cart-image {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+/* Custom file upload button */
+.custom-file-upload {
+    border: 1px solid #ccc;
+    display: inline-block;
+    padding: 6px 12px;
+    cursor: pointer;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.custom-file-upload:hover {
+    background-color: #e9ecef;
+}
+
+.file-upload-success {
+    color: #28a745;
+    margin-top: 5px;
+}
+
+/* Orders tracking */
+.order-tracking-step {
+    position: relative;
+    padding-left: 30px;
+}
+
+.order-tracking-step::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+}
+
+.order-tracking-step.completed::before {
+    background-color: #28a745;
+}
+
+.order-tracking-step.active::before {
+    background-color: #007bff;
+}
+
+/* Order table */
+.order-item-image {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+}
