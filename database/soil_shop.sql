@@ -1,4 +1,11 @@
--- S-Oil Products Store Database
+-- SQL Script for S-Oil Products Store
+-- Run this script to create the necessary database tables
+
+-- Create database (if it doesn't exist)
+CREATE DATABASE IF NOT EXISTS soil_shop;
+
+-- Use the database
+USE soil_shop;
 
 -- Drop tables if they exist
 DROP TABLE IF EXISTS order_items;
@@ -10,101 +17,96 @@ DROP TABLE IF EXISTS users;
 
 -- Create users table
 CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  email VARCHAR(100) NOT NULL,
-  full_name VARCHAR(100) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20),
+    address TEXT,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    zip VARCHAR(20),
+    is_admin TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create products table
 CREATE TABLE products (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT NOT NULL,
-  price DECIMAL(10, 2) NOT NULL,
-  sale_price DECIMAL(10, 2) NULL,
-  image_url VARCHAR(255) NOT NULL,
-  category VARCHAR(100) NOT NULL,
-  in_stock TINYINT(1) DEFAULT 1,
-  rating DECIMAL(3, 1) NULL,
-  review_count INT NULL,
-  is_prime TINYINT(1) DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    image_url VARCHAR(255),
+    category VARCHAR(50) NOT NULL,
+    stock_quantity INT DEFAULT 0,
+    is_featured TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create carts table
 CREATE TABLE carts (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Create cart_items table
 CREATE TABLE cart_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  cart_id INT NOT NULL,
-  product_id INT NOT NULL,
-  quantity INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cart_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 -- Create orders table
 CREATE TABLE orders (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  total DECIMAL(10, 2) NOT NULL,
-  status ENUM('pending', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled') DEFAULT 'pending',
-  shipping_address VARCHAR(255) NOT NULL,
-  shipping_city VARCHAR(100) NOT NULL,
-  shipping_state VARCHAR(100) NOT NULL,
-  shipping_zip VARCHAR(20) NOT NULL,
-  shipping_method ENUM('pickup', 'delivery') NOT NULL,
-  payment_method ENUM('gcash', 'counter') NOT NULL,
-  payment_screenshot VARCHAR(255) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    total DECIMAL(10,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    payment_method VARCHAR(50) NOT NULL,
+    payment_screenshot VARCHAR(255),
+    shipping_method VARCHAR(50) NOT NULL,
+    shipping_address TEXT,
+    shipping_city VARCHAR(50),
+    shipping_state VARCHAR(50),
+    shipping_zip VARCHAR(20),
+    customer_name VARCHAR(100) NOT NULL,
+    customer_email VARCHAR(100) NOT NULL,
+    customer_phone VARCHAR(20) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Create order_items table
 CREATE TABLE order_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id INT NOT NULL,
-  product_id INT NOT NULL,
-  quantity INT NOT NULL,
-  price DECIMAL(10, 2) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
--- Insert test user
-INSERT INTO users (username, password, email, full_name) VALUES
-('user1', '$2y$10$8WjwU9OMRp6N3ocYQcsYEOrn/qMW7vZjOULKxBLz3H3WGkHOdJLQS', 'user@example.com', 'Test User');
--- Password is 'password' (hashed with bcrypt)
+-- Insert sample admin user (password is 'admin123')
+INSERT INTO users (username, password, email, first_name, last_name, is_admin)
+VALUES ('admin', '$2y$10$8SOOPxr6.f5s1tgQK38Sz.9eRNPfm0.UjWQvfJQ1VTS90QNkHLJQe', 'admin@example.com', 'Admin', 'User', 1);
 
--- Insert S-Oil products
-INSERT INTO products (name, description, price, sale_price, image_url, category, in_stock, rating, review_count, is_prime) VALUES
-('S-Oil Ultra Synthetic 5W-30 Motor Oil', 'Fully synthetic premium motor oil that provides outstanding performance and protection. Ideal for modern engines.', 29.99, 24.99, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Motor Oil', 1, 4.8, 234, 1),
-
-('S-Oil Seven Dragon 10W-40 Semi-Synthetic Oil', 'Semi-synthetic oil that offers excellent protection against engine wear and tear. Ideal for high-mileage vehicles.', 19.99, 17.99, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Motor Oil', 1, 4.5, 189, 1),
-
-('S-Oil Automotive Filter', 'High-quality filter that efficiently removes contaminants from your engine oil. Extends engine life and improves performance.', 9.99, 7.50, 'https://images.unsplash.com/photo-1635784063504-1a0c869c8cf4?auto=format&fit=crop&w=400&h=300', 'Filters', 1, 4.3, 102, 1),
-
-('S-Oil Premium Brake Fluid DOT4', 'High-performance brake fluid with superior thermal stability. Ensures reliable braking system performance under various conditions.', 12.99, NULL, 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?auto=format&fit=crop&w=400&h=300', 'Brake Fluids', 1, 4.7, 156, 1),
-
-('S-Oil Coolant/Antifreeze', 'Advanced formula coolant that provides year-round protection against freezing and overheating. Compatible with all types of radiators.', 14.99, 12.99, 'https://images.unsplash.com/photo-1624984673480-e2ea2e588462?auto=format&fit=crop&w=400&h=300', 'Coolants', 1, 4.6, 87, 1),
-
-('S-Oil Heavy Duty Diesel Engine Oil 15W-40', 'Specially formulated for diesel engines in heavy-duty applications. Provides excellent soot control and wear protection.', 39.99, 34.99, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Motor Oil', 1, 4.9, 210, 1),
-
-('S-Oil Transmission Fluid ATF', 'High-quality automatic transmission fluid that ensures smooth shifting and optimal transmission performance.', 16.99, NULL, 'https://images.unsplash.com/photo-1613177794106-be20802b11d3?auto=format&fit=crop&w=400&h=300', 'Transmission Fluids', 1, 4.4, 76, 1),
-
-('S-Oil Grease Lubricant', 'Multipurpose grease for automotive and industrial applications. Provides excellent lubrication and protection against wear.', 8.99, 6.99, 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?auto=format&fit=crop&w=400&h=300', 'Lubricants', 1, 4.2, 63, 0);
-
--- Create a cart for the test user
-INSERT INTO carts (user_id) VALUES (1);
+-- Insert sample S-Oil products
+INSERT INTO products (name, description, price, image_url, category, stock_quantity, is_featured) VALUES
+('S-Oil Ultra Synthetic 5W-30 Motor Oil', 'Premium fully synthetic motor oil designed for high-performance engines. Provides superior wear protection and improved fuel efficiency.', 1999.00, 'assets/images/products/oil1.jpg', 'engine_oil', 100, 1),
+('S-Oil Seven Gold 5W-40 Motor Oil', 'High-quality synthetic motor oil that protects engines from wear and tear, while ensuring smooth performance in all conditions.', 1799.00, 'assets/images/products/oil2.jpg', 'engine_oil', 85, 1),
+('S-Oil ATF Multi Vehicle Transmission Fluid', 'Automatic transmission fluid suitable for most Asian and American vehicles. Ensures smooth shifting and helps extend transmission life.', 899.00, 'assets/images/products/transmission1.jpg', 'transmission_fluid', 65, 1),
+('S-Oil Super Gear Oil 80W-90', 'Heavy-duty gear oil for manual transmissions and differentials. Excellent protection against wear, corrosion, and oxidation.', 799.00, 'assets/images/products/transmission2.jpg', 'transmission_fluid', 50, 0),
+('S-Oil DOT 4 Brake Fluid', 'High-performance brake fluid with high boiling point for reliable braking in demanding conditions. Compatible with all vehicles requiring DOT 4 fluid.', 499.00, 'assets/images/products/brake1.jpg', 'brake_fluid', 120, 1),
+('S-Oil DOT 3 Brake Fluid', 'Standard brake fluid suitable for most vehicles. Provides consistent braking performance and protects against corrosion.', 399.00, 'assets/images/products/brake2.jpg', 'brake_fluid', 90, 0),
+('S-Oil Long Life Coolant', 'Extended-life coolant and antifreeze that protects against overheating and freezing. Compatible with all vehicle types.', 699.00, 'assets/images/products/coolant1.jpg', 'coolant', 75, 1),
+('S-Oil Pink Antifreeze Coolant', 'Premium antifreeze and coolant with corrosion inhibitors. Helps maintain optimal engine temperature in all seasons.', 599.00, 'assets/images/products/coolant2.jpg', 'coolant', 60, 0);

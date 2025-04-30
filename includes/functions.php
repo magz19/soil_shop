@@ -3,11 +3,86 @@
  * Helper functions for the S-Oil Products Store
  */
 
+// Include database connection
+require_once 'db_connection.php';
+
 /**
  * Format price with Philippine Peso symbol
  */
 function formatPrice($price) {
     return '₱' . number_format($price, 2);
+}
+
+/**
+ * Get all products from database
+ */
+function getAllProducts() {
+    global $conn;
+    
+    try {
+        $sql = "SELECT * FROM products ORDER BY id ASC";
+        $result = $conn->query($sql);
+        
+        $products = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $products[] = $row;
+            }
+        }
+        
+        return $products;
+    } catch (Exception $e) {
+        return handleDatabaseError($sql, $e, []);
+    }
+}
+
+/**
+ * Get products by category
+ */
+function getProductsByCategory($category) {
+    global $conn;
+    
+    try {
+        $sql = "SELECT * FROM products WHERE category = ? ORDER BY id ASC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $category);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $products = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $products[] = $row;
+            }
+        }
+        
+        return $products;
+    } catch (Exception $e) {
+        return handleDatabaseError($sql, $e, []);
+    }
+}
+
+/**
+ * Get product by ID
+ */
+function getProduct($id) {
+    global $conn;
+    
+    try {
+        $sql = "SELECT * FROM products WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result && $result->num_rows > 0) {
+            return $result->fetch_assoc();
+        }
+        
+        return null;
+    } catch (Exception $e) {
+        return handleDatabaseError($sql, $e, null);
+    }
 }
 
 /**

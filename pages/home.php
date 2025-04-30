@@ -1,127 +1,179 @@
+<?php
+// Include helper functions if not already included
+if (!function_exists('getAllProducts')) {
+    require_once 'includes/functions.php';
+}
+
+// Get featured products
+$featuredProducts = getAllProducts();
+
+// Limit to 8 products for featured section
+$featuredProducts = array_slice($featuredProducts, 0, 8);
+
+// Get categories for display
+$categories = [
+    'engine_oil' => 'Engine Oil',
+    'transmission_fluid' => 'Transmission Fluid',
+    'brake_fluid' => 'Brake Fluid',
+    'coolant' => 'Coolant'
+];
+?>
+
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="mb-4">S-Oil Products</h1>
-            
-            <!-- Categories -->
-            <div class="d-flex flex-wrap mb-4">
-                <?php
-                $categories = [];
-                $products = getAllProducts();
-                
-                // Extract unique categories
-                foreach ($products as $product) {
-                    if (!in_array($product['category'], $categories)) {
-                        $categories[] = $product['category'];
-                    }
-                }
-                
-                // Display category buttons
-                foreach ($categories as $category) {
-                    echo '<a href="index.php?page=home&category=' . urlencode($category) . '" class="btn btn-outline-primary me-2 mb-2">' . htmlspecialchars($category) . '</a>';
-                }
-                ?>
-                <a href="index.php?page=home" class="btn btn-outline-secondary me-2 mb-2">All Products</a>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <?php
-        // Filter products by category if specified
-        $filteredProducts = $products;
-        if (isset($_GET['category'])) {
-            $category = $_GET['category'];
-            $filteredProducts = getProductsByCategory($category);
-        }
-        
-        // Display products
-        foreach ($filteredProducts as $product) {
-            ?>
-            <div class="col-md-4 col-lg-3 mb-4">
-                <div class="card product-card h-100">
-                    <img src="<?php echo htmlspecialchars($product['image_url']); ?>" class="card-img-top product-image p-3" alt="<?php echo htmlspecialchars($product['name']); ?>">
-                    
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
-                        
-                        <p class="card-text text-truncate-3"><?php echo htmlspecialchars($product['description']); ?></p>
-                        
-                        <div class="mt-auto">
-                            <div class="d-flex align-items-center mb-2">
-                                <?php
-                                // Display rating stars
-                                if (!empty($product['rating'])) {
-                                    echo '<div class="me-2">';
-                                    $rating = $product['rating'];
-                                    $fullStars = floor($rating);
-                                    $halfStar = $rating - $fullStars >= 0.5;
-                                    
-                                    for ($i = 0; $i < $fullStars; $i++) {
-                                        echo '<i class="fas fa-star text-warning"></i>';
-                                    }
-                                    
-                                    if ($halfStar) {
-                                        echo '<i class="fas fa-star-half-alt text-warning"></i>';
-                                        $fullStars++;
-                                    }
-                                    
-                                    for ($i = $fullStars + ($halfStar ? 0 : 0); $i < 5; $i++) {
-                                        echo '<i class="far fa-star text-warning"></i>';
-                                    }
-                                    
-                                    echo '</div>';
-                                    
-                                    if (!empty($product['review_count'])) {
-                                        echo '<small class="text-muted">(' . $product['review_count'] . ')</small>';
-                                    }
-                                }
-                                ?>
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-lg-12">
+            <div class="card border-0 rounded-4 overflow-hidden shadow hero-card">
+                <div class="card-body p-5 bg-light">
+                    <div class="row align-items-center">
+                        <div class="col-lg-7">
+                            <h1 class="display-5 fw-bold mb-3">Premium S-Oil Products</h1>
+                            <p class="lead mb-4">High-performance oils and lubricants for your vehicle, engineered for excellence.</p>
+                            <div class="d-flex gap-3">
+                                <a href="index.php?page=products" class="btn btn-warning btn-lg px-4">
+                                    Shop Now <i class="fas fa-arrow-right ms-2"></i>
+                                </a>
+                                <a href="#featured-products" class="btn btn-outline-secondary btn-lg px-4">
+                                    View Products
+                                </a>
                             </div>
-                            
-                            <div class="d-flex align-items-center mb-3">
-                                <?php if (!empty($product['sale_price'])): ?>
-                                    <span class="product-price sale-price me-2"><?php echo formatPrice($product['sale_price']); ?></span>
-                                    <span class="original-price"><?php echo formatPrice($product['price']); ?></span>
-                                <?php else: ?>
-                                    <span class="product-price"><?php echo formatPrice($product['price']); ?></span>
-                                <?php endif; ?>
-                                
-                                <?php if ($product['is_prime']): ?>
-                                    <span class="badge bg-warning text-dark ms-auto">Prime</span>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="d-grid gap-2">
-                                <a href="index.php?page=product&id=<?php echo $product['id']; ?>" class="btn btn-primary">View Details</a>
-                                
-                                <form action="actions/add_to_cart.php" method="post">
-                                    <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-warning w-100">Add to Cart</button>
-                                </form>
-                            </div>
+                        </div>
+                        <div class="col-lg-5 text-center d-none d-lg-block">
+                            <img src="assets/images/hero-image.png" alt="S-Oil Products" class="img-fluid hero-image" style="max-height: 300px;">
                         </div>
                     </div>
                 </div>
             </div>
-            <?php
-        }
+        </div>
+    </div>
+    
+    <!-- Categories Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="fw-bold mb-4">Product Categories</h2>
+        </div>
         
-        // Display message if no products found
-        if (count($filteredProducts) === 0) {
-            echo '<div class="col-12"><div class="alert alert-info">No products found.</div></div>';
-        }
-        ?>
+        <?php foreach ($categories as $slug => $name): ?>
+            <div class="col-md-3 mb-4">
+                <a href="index.php?page=products&category=<?php echo $slug; ?>" class="text-decoration-none">
+                    <div class="card border-0 rounded-4 shadow-sm category-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="category-icon mb-3">
+                                <i class="fas fa-oil-can fa-3x text-warning"></i>
+                            </div>
+                            <h5 class="card-title"><?php echo $name; ?></h5>
+                            <p class="card-text text-muted small">Quality <?php echo $name; ?> Products</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    
+    <!-- Featured Products Section -->
+    <div id="featured-products" class="row mb-5">
+        <div class="col-12">
+            <h2 class="fw-bold mb-4">Featured Products</h2>
+        </div>
+        
+        <?php if (count($featuredProducts) > 0): ?>
+            <?php foreach ($featuredProducts as $product): ?>
+                <div class="col-md-3 mb-4">
+                    <div class="card border-0 rounded-4 shadow-sm product-card h-100">
+                        <div class="position-relative">
+                            <img src="<?php echo htmlspecialchars($product['image_url']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="card-img-top rounded-top-4 p-3" style="height: 200px; object-fit: contain;">
+                            <?php if ($product['is_featured']): ?>
+                                <span class="position-absolute top-0 end-0 badge bg-warning m-3">Featured</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
+                            <p class="card-text text-muted small"><?php echo substr(htmlspecialchars($product['description']), 0, 80); ?>...</p>
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="fw-bold text-primary"><?php echo formatPrice($product['price']); ?></span>
+                                    <a href="index.php?page=product&id=<?php echo $product['id']; ?>" class="btn btn-sm btn-outline-primary">
+                                        View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No products found. Please check back later.
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    
+    <!-- Why Choose Us Section -->
+    <div class="row mb-5 pt-4">
+        <div class="col-12 text-center mb-4">
+            <h2 class="fw-bold">Why Choose S-Oil Products?</h2>
+            <p class="text-muted">Trusted by mechanics and drivers for quality and performance</p>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 rounded-4 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-medal fa-3x text-warning"></i>
+                    </div>
+                    <h4>Premium Quality</h4>
+                    <p class="text-muted">All our products are made with high-quality base oils and advanced additives.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 rounded-4 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-shield-alt fa-3x text-warning"></i>
+                    </div>
+                    <h4>Engine Protection</h4>
+                    <p class="text-muted">Our oils provide superior protection against wear, rust, and corrosion.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 rounded-4 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-tachometer-alt fa-3x text-warning"></i>
+                    </div>
+                    <h4>Performance Boost</h4>
+                    <p class="text-muted">Improve fuel efficiency and engine performance with our specially formulated products.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
-    .text-truncate-3 {
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.hero-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.category-card:hover, .product-card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.category-icon, .feature-icon {
+    height: 80px;
+    width: 80px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(255, 193, 7, 0.1);
+}
 </style>
