@@ -117,7 +117,7 @@ $currentStatusIndex = array_search($order['status'], array_keys($statusTimeline)
                     </div>
                     
                     <!-- Order Status Timeline -->
-                    <?php if ($order['status'] != 'cancelled'): ?>
+                    <?php if ($order['status'] != 'cancelled' && $currentStatusIndex !== false): ?>
                         <div class="mb-4">
                             <h6>Order Status</h6>
                             <div class="order-timeline">
@@ -150,11 +150,16 @@ $currentStatusIndex = array_search($order['status'], array_keys($statusTimeline)
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($order['items'] as $item): ?>
+                                <?php 
+                                $items = is_array($order['items']) ? $order['items'] : [];
+                                foreach ($items as $item): 
+                                ?>
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
+                                                <?php if (isset($item['product']['image_url'])): ?>
                                                 <img src="<?php echo htmlspecialchars($item['product']['image_url']); ?>" alt="<?php echo htmlspecialchars($item['product']['name']); ?>" class="order-item-image me-3">
+                                                <?php endif; ?>
                                                 <div>
                                                     <h6 class="mb-0"><?php echo htmlspecialchars($item['product']['name']); ?></h6>
                                                 </div>

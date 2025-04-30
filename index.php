@@ -4,6 +4,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Check if user is logged in (either as admin or customer)
+$isLoggedIn = isset($_SESSION['is_admin']) || isset($_SESSION['user_id']);
+if (!$isLoggedIn && basename($_SERVER['PHP_SELF']) !== 'login.php') {
+    // Redirect to login page
+    header('Location: login.php');
+    exit;
+}
+
 // Include header
 include 'includes/header.php';
 
