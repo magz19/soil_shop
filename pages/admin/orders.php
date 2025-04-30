@@ -114,7 +114,9 @@ $statusOptions = [
                         <tr>
                             <th>Order ID</th>
                             <th>Date</th>
-                            <th>Customer</th>
+                            <th>Customer ID</th>
+                            <th>Customer Name</th>
+                            <th>Customer Phone</th>
                             <th>Shipping</th>
                             <th>Payment</th>
                             <th>Total</th>
@@ -128,7 +130,9 @@ $statusOptions = [
                                 <tr>
                                     <td><strong>#<?php echo $order['id']; ?></strong></td>
                                     <td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td>
-                                    <td><?php echo isset($order['customer_name']) ? htmlspecialchars($order['customer_name']) : 'Customer #' . $order['user_id']; ?></td>
+                                    <td><?php echo $order['user_id']; ?></td>
+                                    <td><?php echo isset($order['customer_name']) ? htmlspecialchars($order['customer_name']) : htmlspecialchars($order['customer_email']); ?></td>
+                                    <td><?php echo isset($order['customer_phone']) ? htmlspecialchars($order['customer_phone']) : 'N/A'; ?></td>
                                     <td><?php echo $order['shipping_method'] == 'pickup' ? 'Pickup' : 'Delivery'; ?></td>
                                     <td><?php echo $order['payment_method'] == 'gcash' ? 'GCash' : 'OTC'; ?></td>
                                     <td><?php echo formatPrice($order['total']); ?></td>
@@ -191,7 +195,7 @@ $statusOptions = [
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                     <p>No orders found.</p>
                                     <?php if (!empty($statusFilter) || !empty($searchTerm)): ?>

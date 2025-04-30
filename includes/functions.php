@@ -160,10 +160,7 @@ function getRecentOrders($limit = 5) {
     global $conn;
     
     try {
-        $sql = "SELECT o.*, u.first_name, u.last_name, 
-                CONCAT(u.first_name, ' ', u.last_name) as customer_name 
-                FROM orders o 
-                LEFT JOIN users u ON o.user_id = u.id 
+        $sql = "SELECT o.* FROM orders o 
                 ORDER BY o.created_at DESC 
                 LIMIT ?";
                 
@@ -217,11 +214,7 @@ function getFilteredOrders($status = '', $search = '', $limit = 10, $offset = 0)
     global $conn;
     
     try {
-        $sql = "SELECT o.*, u.first_name, u.last_name, 
-                CONCAT(u.first_name, ' ', u.last_name) as customer_name 
-                FROM orders o 
-                LEFT JOIN users u ON o.user_id = u.id 
-                WHERE 1=1";
+        $sql = "SELECT o.* FROM orders o WHERE 1=1";
         
         $params = [];
         $types = "";
@@ -236,10 +229,12 @@ function getFilteredOrders($status = '', $search = '', $limit = 10, $offset = 0)
         // Add search filter if provided
         if (!empty($search)) {
             $searchTerm = "%$search%";
-            $sql .= " AND (o.id LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)";
+            $sql .= " AND (o.id LIKE ? OR o.customer_name LIKE ? OR o.customer_email LIKE ? OR o.customer_phone LIKE ?)";
             $params[] = $searchTerm;
             $params[] = $searchTerm;
-            $types .= "ss";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $types .= "ssss";
         }
         
         $sql .= " ORDER BY o.created_at DESC LIMIT ? OFFSET ?";
@@ -277,9 +272,7 @@ function getFilteredOrdersCount($status = '', $search = '') {
     global $conn;
     
     try {
-        $sql = "SELECT COUNT(*) as total FROM orders o 
-                LEFT JOIN users u ON o.user_id = u.id 
-                WHERE 1=1";
+        $sql = "SELECT COUNT(*) as total FROM orders o WHERE 1=1";
         
         $params = [];
         $types = "";
@@ -294,10 +287,12 @@ function getFilteredOrdersCount($status = '', $search = '') {
         // Add search filter if provided
         if (!empty($search)) {
             $searchTerm = "%$search%";
-            $sql .= " AND (o.id LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)";
+            $sql .= " AND (o.id LIKE ? OR o.customer_name LIKE ? OR o.customer_email LIKE ? OR o.customer_phone LIKE ?)";
             $params[] = $searchTerm;
             $params[] = $searchTerm;
-            $types .= "ss";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $types .= "ssss";
         }
         
         $stmt = $conn->prepare($sql);
@@ -347,11 +342,7 @@ function getOrderWithItems($orderId) {
     
     try {
         // Get order details
-        $sql = "SELECT o.*, u.first_name, u.last_name, 
-                CONCAT(u.first_name, ' ', u.last_name) as customer_name 
-                FROM orders o 
-                LEFT JOIN users u ON o.user_id = u.id 
-                WHERE o.id = ?";
+        $sql = "SELECT o.* FROM orders o WHERE o.id = ?";
                 
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $orderId);
@@ -433,10 +424,7 @@ function getUserOrders($userId) {
     global $conn;
     
     try {
-        $sql = "SELECT o.*, u.first_name, u.last_name, 
-                CONCAT(u.first_name, ' ', u.last_name) as customer_name 
-                FROM orders o 
-                LEFT JOIN users u ON o.user_id = u.id 
+        $sql = "SELECT o.* FROM orders o 
                 WHERE o.user_id = ?
                 ORDER BY o.created_at DESC";
                 
