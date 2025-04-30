@@ -23,6 +23,10 @@ switch ($page) {
         include 'pages/home.php';
         break;
         
+    case 'products':
+        include 'pages/products.php';
+        break;
+        
     case 'product':
         include 'pages/product.php';
         break;
@@ -37,6 +41,10 @@ switch ($page) {
         
     case 'orders':
         include 'pages/orders.php';
+        break;
+        
+    case 'order-details':
+        include 'pages/order-details.php';
         break;
         
     case 'admin':
